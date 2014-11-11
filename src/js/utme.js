@@ -1,5 +1,5 @@
-(function(global, selectorGenerator, Simulate) {
-    var myGenerator = new CssSelectorGenerator();
+(function(global, Simulate) {
+    // var myGenerator = new CssSelectorGenerator();
     var saveHandlers = [];
 
     function getScenario(name) {
@@ -39,19 +39,35 @@
                 var selectors = step.data.selectors;
                 var eles;
                 for (var k in selectors) {
-                    eles = document.querySelectorAll(selectors[k]);
+                    eles = $(selectors[k]);
                     if (eles.length > 0) {
                       break;
                     }
                 }
 
                 if (eles.length > 1) {
-                    alert("FOUND MORE THAN ONE ELEMENT");
+                    // alert("FOUND MORE THAN ONE ELEMENT");
+                } else if (eles.length == 0) {
+                    console.log("Could not find element: " + selectors.selector)
+                    setTimeout(function() {
+                      runStep(scenario, idx + 1);
+                    }, 500);
                 } else {
                     var ele = eles[0];
                     if (events.indexOf(step.eventName) >= 0) {
+                        if (step.eventName == 'click') {
+                          setTimeout(function() {
+                            runStep(scenario, idx + 1);
+                          }, 500);
+                        }
+
                         Simulate[step.eventName](ele);
                         ele.value = step.data.value;
+                        Simulate.event(ele, 'change');
+
+                        if (step.eventName != 'click') {
+                          runStep(scenario, idx + 1);
+                        }
                     }
 
                     if (step.eventName == 'keypress') {
@@ -59,11 +75,12 @@
                         Simulate.keypress(ele, 'keydown', { keyCode: step.data.keyCode });
 
                         ele.value = step.data.value;
+                        Simulate.event(ele, 'change');
 
                         Simulate.keypress(ele, 'keyup', { keyCode: step.data.keyCode });
-                    }
 
-                    runStep(scenario, idx + 1);
+                        runStep(scenario, idx + 1);
+                    }
                 }
             }
         } else {
@@ -75,7 +92,9 @@
         init: function() {
           var state = utme.loadState();
           if (state.status === "RUNNING") {
-              runStep(state.runningScenario, state.runningStep + 1);
+              setTimeout(function() {
+                runStep(state.runningScenario, state.runningStep + 1);
+              }, 2000);
           }
         },
         startRecording: function() {
@@ -99,7 +118,9 @@
             return utme.loadState().status;
         },
         findSelectors: function (element) {
-            return myGenerator.getAllSelectors(element);
+            return {
+                selector: $(element).selectorator().generate()[0]
+            };
         },
         registerEvent: function(eventName, data) {
             var state = utme.loadState();
@@ -270,4 +291,4 @@
 
     global.utme = utme;
 
-})(this, CssSelectorGenerator, Simulate);
+})(this, Simulate);
