@@ -1,0 +1,11 @@
+{
+  "name": "utme",
+  "version": "0.0.1",
+  "authors": [
+    "David Tittsworth <stopyoukid@gmail.com>"
+  ],
+  "description": "UI Test Generator",
+  "main": "build/utme.js",
+  "license": "MIT",
+  "private": true
+}
