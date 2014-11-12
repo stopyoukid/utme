@@ -6,10 +6,11 @@ function extend(dst, src){
 }
 
 var Simulate = {
-    event: function(element, eventName){
+    event: function(element, eventName, options){
         if (document.createEvent) {
             var evt = document.createEvent("HTMLEvents")
-            evt.initEvent(eventName, true, true )
+            evt.initEvent(eventName, eventName != 'mouseenter' && eventName != 'mouseleave', true )
+            extend(evt, options);
             element.dispatchEvent(evt)
         }else{
             var evt = document.createEventObject()
@@ -83,6 +84,8 @@ var events = [
     'mouseout',
     'mouseover',
     'mouseup',
+    'mouseenter',
+    'mouseleave',
     'resize',
     'scroll',
     'select',
@@ -94,8 +97,8 @@ var events = [
 for (var i = events.length; i--;){
     var event = events[i]
     Simulate[event] = (function(evt){
-        return function(element){
-            this.event(element, evt)
+        return function(element, options){
+            this.event(element, evt, options)
         }
     }(event))
 }

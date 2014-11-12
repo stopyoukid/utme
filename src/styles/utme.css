@@ -23,5 +23,9 @@
 }
 
 .utme-button.start {
-  margin-right: 40px
+  margin-right: 80px
+}
+
+.utme-button.run {
+  margin-right: 0px
 }

@@ -20,13 +20,15 @@ module.exports = function(grunt) {
             },
             files: [
               { src: ['src/js/*.js'], dest: 'build/js/utme.js' },
-              { src: ['src/js/persisters/*.js'], dest: 'build/js/persisters/utme-file-persister.js' }
+              { src: ['src/js/persisters/*.js'], dest: 'build/js/persisters/utme-file-persister.js' },
+              { src: ['src/js/reporters/*.js'], dest: 'build/js/reporters/utme-server-reporter.js' }
             ]
         },
         build: {
           files: [
             { src: ['src/js/*.js'], dest: 'build/js/utme.js' },
-            { src: ['src/js/persisters/*.js'], dest: 'build/js/persisters/utme-file-persister.js' }
+            { src: ['src/js/persisters/*.js'], dest: 'build/js/persisters/utme-file-persister.js' },
+            { src: ['src/js/reporters/*.js'], dest: 'build/js/reporters/utme-server-reporter.js' }
           ]
         }
       },
