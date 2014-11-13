@@ -89,11 +89,11 @@
                             options.which = options.button = step.data.button;
                         }
 
-                        if (step.eventName == 'click' || step.eventName == 'focus' || step.eventName == 'blur') {
-                          ele[step.eventName]();
+                        var handler =  ele[step.eventName];
+                        if ((step.eventName == 'click' || step.eventName == 'focus' || step.eventName == 'blur') && handler) {
+                          handler();
                         } else {
                           Simulate[step.eventName](ele, options);
-
                         }
                         ele.value = step.data.value;
                         Simulate.event(ele, 'change');
@@ -462,6 +462,9 @@
         utme.unload();
     });
 
+    window.addEventListener('error', function(errorMessage) {
+        utme.reportLog("Script Error: " + errorMsg);
+    });
 
     global.utme = utme;
 
