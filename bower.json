@@ -5,7 +5,7 @@
     "David Tittsworth <stopyoukid@gmail.com>"
   ],
   "description": "UI Test Generator",
-  "main": "build/utme.js",
+  "main": "build/js/utme.js",
   "license": "MIT",
   "private": true
 }
