@@ -23,6 +23,11 @@
       'focus',
       'blur',
       'dblclick',
+      // 'drag',
+      // 'dragenter',
+      // 'dragleave',
+      // 'dragover',
+      // 'dragstart',
       // 'input',
       'mousedown',
       // 'mousemove',
@@ -59,8 +64,8 @@
                     }
                 }
 
-                if (step.eventName == 'validate') {
-                    if (eles.length == 0) {
+                if (step.eventName === 'validate') {
+                    if (eles.length === 0) {
                         utme.stopScenario();
                         utme.reportError('Could not find element for selectors: ' + JSON.stringify(selectors) + " for event " + step.eventName);
                         return;
@@ -84,7 +89,12 @@
                             options.which = options.button = step.data.button;
                         }
 
-                        Simulate[step.eventName](ele, options);
+                        if (step.eventName == 'click' || step.eventName == 'focus' || step.eventName == 'blur') {
+                          ele[step.eventName]();
+                        } else {
+                          Simulate[step.eventName](ele, options);
+
+                        }
                         ele.value = step.data.value;
                         Simulate.event(ele, 'change');
                     }
@@ -100,10 +110,11 @@
                         Simulate.keyup(ele, key);
                     }
                 } else if (foundTooMany) {
-                    console.warn("[WARN] Found more than one element for: " + JSON.stringify(selectors.join(", ")));
-                } else if (eles.length == 0) {
-                    console.warn("[WARN] Could not find element(" + step.eventName + "): " + JSON.stringify(selectors.join(", ")));
+                    console.warn("[WARN] Found more than one element for: " + JSON.stringify(selectors.join(", ")) + " with text " + step.data.text);
+                } else if (eles.length === 0) {
+                    console.warn("[WARN] Could not find element(" + step.eventName + "): " + JSON.stringify(selectors.join(", ")) + " with text " + step.data.text);
                 }
+
                 runNextStep(scenario, idx);
             }
         } else {
@@ -113,15 +124,15 @@
 
     function runNextStep(scenario, idx) {
         if (scenario.steps.length > (idx + 1)) {
-            var timeout;
-            if (scenario.steps[idx].eventName.indexOf("key") >= 0) {
-                timeout = 10;
-            } else {
-                timeout = getTimeout(scenario, idx, idx + 1);
-            }
-            setTimeout(function() {
+            if (scenario.steps[idx].eventName == 'mousemove' || scenario.steps[idx].eventName.indexOf("key") >= 0) {
               runStep(scenario, idx + 1);
-            }, timeout);
+            } else {
+              timeout = getTimeout(scenario, idx, idx + 1) / 2;
+
+              setTimeout(function() {
+                runStep(scenario, idx + 1);
+              }, timeout);
+            }
         } else {
             utme.stopScenario(true);
         }
@@ -142,6 +153,7 @@
           }
         },
         startRecording: function() {
+            localStorage.clear();
             var state = utme.loadState();
             if (state.status != 'STARTED') {
                 state.status = 'STARTED';
@@ -274,14 +286,14 @@
         unload: function() {
             var state = utme.loadState();
             state.status = 'NOT_STARTED';
-            saveState(state);
+            utme.saveState(state);
         }
     };
 
     function initEventHandlers() {
         for (var i = 0; i < events.length; i++) {
             document.addEventListener(events[i], (function(evt) {
-                return function(e) {
+                var handler = function(e) {
                   if (utme.getStatus() == 'STARTED' && e.target.hasAttribute && !e.target.hasAttribute('data-ignore')) {
                       if ((evt == 'mousedown' || evt == 'click') && validating) {
                           e.stopPropagation();
@@ -303,7 +315,9 @@
                           utme.registerEvent(evt, args);
                       }
                   }
+
                 };
+                return handler;
             })(events[i]), true);
         }
 
@@ -444,7 +458,7 @@
 
     });
 
-    window.addEventListener('unload', function() {
+    window.addEventListener('beforeunload', function() {
         utme.unload();
     });
 

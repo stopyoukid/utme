@@ -19,16 +19,24 @@ module.exports = function(grunt) {
                 beautify: true
             },
             files: [
-              { src: ['src/js/*.js'], dest: 'build/js/utme.js' },
-              { src: ['src/js/persisters/*.js'], dest: 'build/js/persisters/utme-file-persister.js' },
-              { src: ['src/js/reporters/*.js'], dest: 'build/js/reporters/utme-server-reporter.js' }
+              { src: [
+                  'src/js/*.js',
+                  'src/js/persisters/*.js',
+                  'src/js/reporters/*.js'
+                  ],
+                dest: 'build/js/utme.js'
+              }
             ]
         },
         build: {
           files: [
-            { src: ['src/js/*.js'], dest: 'build/js/utme.js' },
-            { src: ['src/js/persisters/*.js'], dest: 'build/js/persisters/utme-file-persister.js' },
-            { src: ['src/js/reporters/*.js'], dest: 'build/js/reporters/utme-server-reporter.js' }
+            { src: [
+                'src/js/*.js',
+                'src/js/persisters/*.js',
+                'src/js/reporters/*.js'
+                ],
+              dest: 'build/js/utme.js'
+            }
           ]
         }
       },
@@ -48,5 +56,6 @@ module.exports = function(grunt) {
   });
 
   grunt.registerTask('default', ['watch']);
+  grunt.registerTask('build', ['uglify:build', 'copy']);
 
 };
