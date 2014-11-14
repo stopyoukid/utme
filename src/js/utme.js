@@ -1,4 +1,6 @@
+
 (function(global, Simulate) {
+
     // var myGenerator = new CssSelectorGenerator();
     var saveHandlers = [];
     var reportHandlers = [];
@@ -51,29 +53,8 @@
                 window.location = step.data.url.href;
             } else {
                 var selectors = step.data.selectors;
-                var eles;
-                var foundTooMany = false;
-                var foundValid = false;
-                for (var i = 0; i < selectors.length; i++) {
-                    eles = $(selectors[i]);
-                    if (eles.length == 1) {
-                        foundValid = true;
-                        break;
-                    } else if (eles.length > 1) {
-                        foundTooMany = true;
-                    }
-                }
-
-                if (step.eventName === 'validate') {
-                    if (eles.length === 0) {
-                        utme.stopScenario();
-                        utme.reportError('Could not find element for selectors: ' + JSON.stringify(selectors) + " for event " + step.eventName);
-                        return;
-                    } else if (foundTooMany) {
-                        utme.stopScenario();
-                        utme.reportError("Found too many elements for selectors: " + JSON.stringify(selectors));
-                        return;
-                    } else {
+                tryUntilFound(selectors,  function(eles) {
+                    if (step.eventName === 'validate') {
                         var newText = $(eles[0]).text();
                         if (newText != step.data.text) {
                             utme.stopScenario();
@@ -81,7 +62,7 @@
                             return;
                         }
                     }
-                } else if (foundValid) {
+
                     var ele = eles[0];
                     if (events.indexOf(step.eventName) >= 0) {
                         var options = {};
@@ -89,14 +70,18 @@
                             options.which = options.button = step.data.button;
                         }
 
-                        var handler =  ele[step.eventName];
-                        if ((step.eventName == 'click' || step.eventName == 'focus' || step.eventName == 'blur') && handler) {
-                          handler();
+                        if (step.eventName == 'click') {
+                            $(ele).trigger('click');
+                        } else if ((step.eventName == 'focus' || step.eventName == 'blur') && ele[step.eventName]) {
+                            ele[step.eventName]();
                         } else {
-                          Simulate[step.eventName](ele, options);
+                            Simulate[step.eventName](ele, options);
                         }
-                        ele.value = step.data.value;
-                        Simulate.event(ele, 'change');
+
+                        if (typeof ele.value != "undefined" || typeof step.data.value != "undefined") {
+                            ele.value = step.data.value;
+                            Simulate.event(ele, 'change');
+                        }
                     }
 
                     if (step.eventName == 'keypress') {
@@ -109,25 +94,61 @@
 
                         Simulate.keyup(ele, key);
                     }
-                } else if (foundTooMany) {
-                    console.warn("[WARN] Found more than one element for: " + JSON.stringify(selectors.join(", ")) + " with text " + step.data.text);
-                } else if (eles.length === 0) {
-                    console.warn("[WARN] Could not find element(" + step.eventName + "): " + JSON.stringify(selectors.join(", ")) + " with text " + step.data.text);
-                }
 
-                runNextStep(scenario, idx);
+                    runNextStep(scenario, idx);
+                }, function() {
+                    if (step.eventName == 'validate') {
+                        utme.reportError('Could not find appropriate element for selectors: ' + JSON.stringify(selectors) + " for event " + step.eventName);
+                        utme.stopScenario();
+                    } else {
+                        utme.reportLog('Could not find appropriate element for selectors: ' + JSON.stringify(selectors) + " for event " + step.eventName);
+                        runNextStep(scenario, idx);
+                    }
+                }, 500);
             }
         } else {
 
         }
     }
 
+    function tryUntilFound(selectors, callback, fail, timeout) {
+        var started = new Date().getTime();
+
+        function tryFind() {
+            var eles;
+            var foundTooMany = false;
+            var foundValid = false;
+            for (var i = 0; i < selectors.length; i++) {
+                eles = $(selectors[i]);
+                if (eles.length == 1) {
+                    foundValid = true;
+                    break;
+                } else if (eles.length > 1) {
+                    foundTooMany = true;
+                }
+            }
+
+            if (foundValid) {
+                callback(eles);
+            }
+            else if (new Date().getTime() - started < timeout) {
+                setTimeout(tryFind, 20);
+            } else {
+                fail();
+            }
+        }
+
+        tryFind();
+    }
+
     function runNextStep(scenario, idx) {
         if (scenario.steps.length > (idx + 1)) {
-            if (scenario.steps[idx].eventName == 'mousemove' || scenario.steps[idx].eventName.indexOf("key") >= 0) {
+            if (scenario.steps[idx].eventName == 'mousemove' ||
+                scenario.steps[idx].eventName.indexOf("key") >= 0 ||
+                scenario.steps[idx].eventName == 'verify') {
               runStep(scenario, idx + 1);
             } else {
-              timeout = getTimeout(scenario, idx, idx + 1) / 2;
+              timeout = Math.max(getTimeout(scenario, idx, idx + 1) / 100, 50);
 
               setTimeout(function() {
                 runStep(scenario, idx + 1);
@@ -144,12 +165,20 @@
 
     var utme = {
         init: function() {
-          var state = utme.loadState();
-          if (state.status === "RUNNING") {
-              runNextStep(state.runningScenario, state.runningStep);
+          var scenario = getParameterByName('utme_scenario');
+          if (scenario) {
+              localStorage.clear();
+              setTimeout(function() {
+                  utme.runScenario(scenario);
+              }, 2000);
           } else {
-              state.status = "LOADED";
-              utme.saveState(state);
+              var state = utme.loadState();
+              if (state.status === "RUNNING") {
+                  runNextStep(state.runningScenario, state.runningStep);
+              } else {
+                  state.status = "LOADED";
+                  utme.saveState(state);
+              }
           }
         },
         startRecording: function() {
@@ -194,22 +223,22 @@
         },
         findSelectors: function (element) {
             var selectors = $(element).selectorator().generate();
-            var classes = element.className && element.className.split(" ");
-            if (classes && classes.length) {
-                var classSelectorString = "";
-                for (var i = 0; i < classes.length; i++) {
-                    if (classes[i].trim()) {
-                        classSelectorString += "." + classes[i];
-                    }
-                }
+            // var classes = element.className && element.className.split(" ");
+            // if (classes && classes.length) {
+            //     var classSelectorString = "";
+            //     for (var i = 0; i < classes.length; i++) {
+            //         if (classes[i].trim()) {
+            //             classSelectorString += "." + classes[i];
+            //         }
+            //     }
 
-                if (classSelectorString) {
-                    var testSel = $(classSelectorString);
-                    if (testSel.length == 1 && testSel[0] == element) {
-                        selectors.unshift(classSelectorString);
-                    }
-                }
-            }
+            //     if (classSelectorString) {
+            //         var testSel = $(classSelectorString);
+            //         if (testSel.length == 1 && testSel[0] == element) {
+            //             selectors.unshift(classSelectorString);
+            //         }
+            //     }
+            // }
             return selectors;
         },
         registerEvent: function(eventName, data) {
@@ -441,15 +470,7 @@
             initControls();
             initEventHandlers();
 
-            var state = utme.loadState();
-            if (state.status == 'LOADED') {
-                var scenario = getParameterByName('utme_scenario');
-                if (scenario) {
-                    setTimeout(function() {
-                        utme.runScenario(scenario);
-                    }, 500);
-                }
-            } else if (state.status == 'STARTED') {
+            if (utme.loadState().status == 'STARTED') {
                 utme.registerEvent("load", {
                     url: window.location
                 });
@@ -459,13 +480,13 @@
     });
 
     window.addEventListener('beforeunload', function() {
+        localStorage.clear();
         utme.unload();
     });
 
-    window.addEventListener('error', function(errorMessage) {
-        utme.reportLog("Script Error: " + errorMsg);
+    window.addEventListener('error', function(err) {
+        utme.reportLog("Script Error: " + err.message + ":" + err.url + "," + err.line + ":" + err.col);
     });
-
     global.utme = utme;
 
 })(this, Simulate);

@@ -8,6 +8,7 @@
               data: { data: error },
               dataType: "json"
             });
+            console.error(error);
         },
         log: function (log, scenario, utme) {
             $.ajax({

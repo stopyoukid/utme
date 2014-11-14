@@ -1,1 +1,571 @@
-(function(){!function(a){var b,c,d,e,f,g,h,i;return h=a.map,f=a.extend,g=a.inArray,d=function(a,b){return-1!==g(a,b)},e=function(a){return a.replace(/([\!\"\#\$\%\&'\(\)\*\+\,\.\/\:\;<\=>\?\@\[\\\]\^\`\{\|\}\~])/g,"\\$1")},c=function(a,b){return h(a,function(a){return a===b?null:a})},i=function(a){return h(a,function(b,c){return parseInt(c,10)===parseInt(a.indexOf(b),10)?b:null})},b=function(){function b(b,c){this.element=b,this.options=f(f({},a.selectorator.options),c),this.cachedResults={}}return b.prototype.query=function(b){var c;return(c=this.cachedResults)[b]||(c[b]=a(b.replace(/#([^\s]+)/g,"[id='$1']")))},b.prototype.getProperTagName=function(){return this.element[0]?this.element[0].tagName.toLowerCase():null},b.prototype.hasParent=function(){return this.element&&0<this.element.parent().size()},b.prototype.isElement=function(){var a;return a=this.element[0],a&&a.nodeType===a.ELEMENT_NODE},b.prototype.validate=function(a,b,c,e){var f,g;if(null==c&&(c=!0),null==e&&(e=!1),g=this.query(a),c&&1<g.size()||!c&&0===g.size()){if(!b||-1!==a.indexOf(":"))return null;if(f=e?" > ":" ",a=b+f+a,g=this.query(a),c&&1<g.size()||!c&&0===g.size())return null}return d(this.element[0],g.get())?a:null},b.prototype.generate=function(){var a,b,d,e,f;if(!(this.element&&this.hasParent()&&this.isElement()))return[""];for(b=[],f=[this.generateSimple,this.generateAncestor,this.generateRecursive],d=0,e=f.length;e>d;d++)if(a=f[d],b=i(c(a.call(this))),b&&b.length>0)return b;return i(b)},b.prototype.generateAncestor=function(){var c,d,e,f,g,h,i,j,k,l,m,n,o,p;for(g=[],p=this.element.parents(),j=0,m=p.length;m>j;j++){for(d=p[j],c=!0,i=this.generateSimple(null,!1),k=0,n=i.length;n>k;k++)for(h=i[k],f=new b(a(d),this.options).generateSimple(null,!1),l=0,o=f.length;o>l;l++)e=f[l],a.merge(g,this.generateSimple(e,!0,c));c=!1}return g},b.prototype.generateSimple=function(a,b,d){var e,f,g,i,j,k,l,m;for(g=this,i=g.getProperTagName(),j=function(c){return g.validate(c,a,b,d)},m=[[g.getIdSelector],[g.getClassSelector],[g.getIdSelector,!0],[g.getClassSelector,!0],[g.getNameSelector],[function(){return[g.getProperTagName()]}]],k=0,l=m.length;l>k;k++)if(e=m[k],f=e[0].call(g,e[1])||[],f=c(h(f,j)),f.length>0)return f;return[]},b.prototype.generateRecursive=function(){var a,c,d,e;return e=this.getProperTagName(),-1!==e.indexOf(":")&&(e="*"),c=this.element.parent(),d=new b(c).generate()[0],a=c.children(e).index(this.element),e=""+e+":eq("+a+")",""!==d&&(e=d+" > "+e),[e]},b.prototype.getIdSelector=function(a){var b;return null==a&&(a=!1),a=a?this.getProperTagName():"",b=this.element.attr("id"),"string"!=typeof b||d(b,this.getIgnore("id"))?null:[""+a+"#"+e(b)]},b.prototype.getClassSelector=function(a){var b,c,f;return null==a&&(a=!1),f=this.getProperTagName(),/^(body|html)$/.test(f)?null:(a=a?f:"",c=this.getIgnore("class"),b=(this.element.attr("class")||"").replace(/\{.*\}/,"").split(/\s/),h(b,function(b){return b&&!d(b,c)?""+a+"."+e(b):null}))},b.prototype.getNameSelector=function(){var a,b;return b=this.getProperTagName(),a=this.element.attr("name"),a&&!d(a,this.getIgnore("name"))?[""+b+"[name='"+a+"']"]:null},b.prototype.getIgnore=function(a){var b,c,d;return c=this.options.ignore||{},b="class"===a?"classes":""+a+"s",d=c[a]||c[b],"string"==typeof d?[d]:d},b}(),a.selectorator={options:{},unique:i,clean:c,escapeSelector:e},a.fn.selectorator=function(c){return new b(a(this),c)},a.fn.getSelector=function(a){return this.selectorator(a).generate()},this}(jQuery)}).call(this),function(){function a(a,b){for(var c in b)a[c]=b[c];return b}var b={event:function(b,c,d){var e;document.createEvent?(e=document.createEvent("HTMLEvents"),e.initEvent(c,"mouseenter"!=c&&"mouseleave"!=c,!0),a(e,d),b.dispatchEvent(e)):(e=document.createEventObject(),b.fireEvent("on"+c,e))},keyEvent:function(b,c,d){var e,f={bubbles:!0,cancelable:!0,view:window,ctrlKey:!1,altKey:!1,shiftKey:!1,metaKey:!1,keyCode:0,charCode:0};if(a(f,d),document.createEvent)try{e=document.createEvent("KeyEvents"),e.initKeyEvent(c,f.bubbles,f.cancelable,f.view,f.ctrlKey,f.altKey,f.shiftKey,f.metaKey,f.keyCode,f.charCode),b.dispatchEvent(e)}catch(g){e=document.createEvent("Events"),e.initEvent(c,f.bubbles,f.cancelable),a(e,{view:f.view,ctrlKey:f.ctrlKey,altKey:f.altKey,shiftKey:f.shiftKey,metaKey:f.metaKey,keyCode:f.keyCode,charCode:f.charCode}),b.dispatchEvent(e)}}};b.keypress=function(a,b){var c=b.charCodeAt(0);this.keyEvent(a,"keypress",{keyCode:c,charCode:c})},b.keydown=function(a,b){var c=b.charCodeAt(0);this.keyEvent(a,"keydown",{keyCode:c,charCode:c})},b.keyup=function(a,b){var c=b.charCodeAt(0);this.keyEvent(a,"keyup",{keyCode:c,charCode:c})};for(var c=["click","focus","blur","dblclick","input","change","mousedown","mousemove","mouseout","mouseover","mouseup","mouseenter","mouseleave","resize","scroll","select","submit","load","unload"],d=c.length;d--;){var e=c[d];b[e]=function(a){return function(b,c){this.event(b,a,c)}}(e)}"undefined"!=typeof module?module.exports=b:"undefined"!=typeof window?window.Simulate=b:"undefined"!=typeof define&&define(function(){return b})}(),function(a,b){function c(a,b){if(n.length>0)n[0](a,b);else for(var c=q.loadState(),d=0;d<c.scenarios.length;d++)c.scenarios[d].name==a&&b(c.scenarios[d])}function d(a,c){var d=a.steps[c];if(d){var f=q.loadState();if(f.runningScenario=a,f.runningStep=c,q.saveState(f),"load"==d.eventName)window.location=d.data.url.href;else{for(var g,h=d.data.selectors,i=!1,j=!1,k=0;k<h.length;k++){if(g=$(h[k]),1==g.length){j=!0;break}g.length>1&&(i=!0)}if("validate"===d.eventName){if(0===g.length)return q.stopScenario(),void q.reportError("Could not find element for selectors: "+JSON.stringify(h)+" for event "+d.eventName);if(i)return q.stopScenario(),void q.reportError("Found too many elements for selectors: "+JSON.stringify(h));var l=$(g[0]).text();if(l!=d.data.text)return q.stopScenario(),void q.reportError("Expected: "+d.data.text+", but was: "+l)}else if(j){var m=g[0];if(p.indexOf(d.eventName)>=0){var n={};d.data.button&&(n.which=n.button=d.data.button),"click"==d.eventName||"focus"==d.eventName||"blur"==d.eventName?m[d.eventName]():b[d.eventName](m,n),m.value=d.data.value,b.event(m,"change")}if("keypress"==d.eventName){var o=String.fromCharCode(d.data.keyCode);b.keypress(m,o),b.keydown(m,o),m.value=d.data.value,b.event(m,"change"),b.keyup(m,o)}}else i?console.warn("[WARN] Found more than one element for: "+JSON.stringify(h.join(", "))+" with text "+d.data.text):0===g.length&&console.warn("[WARN] Could not find element("+d.eventName+"): "+JSON.stringify(h.join(", "))+" with text "+d.data.text);e(a,c)}}}function e(a,b){a.steps.length>b+1?"mousemove"==a.steps[b].eventName||a.steps[b].eventName.indexOf("key")>=0?d(a,b+1):(timeout=f(a,b,b+1)/2,setTimeout(function(){d(a,b+1)},timeout)):q.stopScenario(!0)}function f(a,b,c){return a.steps[c].timeStamp-a.steps[b].timeStamp}function g(){for(var a=0;a<p.length;a++)document.addEventListener(p[a],function(a){var b=function(b){if("STARTED"==q.getStatus()&&b.target.hasAttribute&&!b.target.hasAttribute("data-ignore")){if(("mousedown"==a||"click"==a)&&o)return b.stopPropagation(),q.registerEvent("validate",{selectors:q.findSelectors(b.target),text:$(b.target).text()}),!1;var c={selectors:q.findSelectors(b.target),value:b.target.value};(b.which||b.button)&&(c.button=b.which||b.button),q.registerEvent(a,c)}};return b}(p[a]),!0);var b={188:"44",109:"45",190:"46",191:"47",192:"96",220:"92",222:"39",221:"93",219:"91",173:"45",187:"61",186:"59",189:"45"},c={96:"~",49:"!",50:"@",51:"#",52:"$",53:"%",54:"^",55:"&",56:"*",57:"(",48:")",45:"_",61:"+",91:"{",93:"}",92:"|",59:":",39:'"',44:"<",46:">",47:"?"};document.addEventListener("keypress",function(a){if("STARTED"==q.getStatus()&&!a.target.hasAttribute("data-ignore")){var d=a.which;b.hasOwnProperty(d)&&(d=b[d]),d=!a.shiftKey&&d>=65&&90>=d?String.fromCharCode(d+32):a.shiftKey&&c.hasOwnProperty(d)?c[d]:String.fromCharCode(d),q.registerEvent("keypress",{selectors:q.findSelectors(a.target),key:d,prevValue:a.target.value,value:a.target.value+d,keyCode:a.keyCode})}},!0)}function h(a,b,c){var d=document.createElement("a");return d.className="utme-button "+b,d.setAttribute("data-ignore",!0),d.innerHTML=a,d.addEventListener("click",c),d}function i(a,b,c,d){a.innerHTML=b?c:d}function j(){document.body.appendChild(h("Record Scenario","start",function(){var a=q.getStatus();"STARTED"==a?q.stopRecording():q.startRecording(),i(this,"STARTED"==a,"Record Scenario","Stop Recording")})),document.body.appendChild(h("Run Scenario","run",function(){q.runScenario()})),document.body.appendChild(h("Verify","verify",function(){var a=q.getStatus();"STARTED"==a&&(o=!o)}))}function k(a){a=a.replace(/[\[]/,"\\[").replace(/[\]]/,"\\]");var b=new RegExp("[\\?&]"+a+"=([^&#]*)"),c=b.exec(location.search);return null===c?"":decodeURIComponent(c[1].replace(/\+/g," "))}var l=[],m=[],n=[],o=!1,p=["click","focus","blur","dblclick","mousedown","mouseenter","mouseleave","mouseout","mouseover","mouseup"],q={init:function(){var a=q.loadState();"RUNNING"===a.status?e(a.runningScenario,a.runningStep):(a.status="LOADED",q.saveState(a))},startRecording:function(){localStorage.clear();var a=q.loadState();"STARTED"!=a.status&&(a.status="STARTED",a.steps=[],q.saveState(a),q.reportLog("Recording Started"))},runScenario:function(a){var b=a||prompt("Scenario to run");c(b,function(b){var c=q.loadState();c.status="RUNNING",q.saveState(c),q.reportLog("Starting Scenario '"+a+"'",b),d(b,0)})},stopScenario:function(a){var b=q.loadState(),c=b.runningScenario;delete b.runningStep,delete b.runningScenario,b.status="LOADED",q.saveState(b),q.reportLog("Stopping Scenario"),a&&q.reportLog("[SUCCESS] Scenario '"+c.name+"' Completed!")},getStatus:function(){return q.loadState().status},findSelectors:function(a){var b=$(a).selectorator().generate(),c=a.className&&a.className.split(" ");if(c&&c.length){for(var d="",e=0;e<c.length;e++)c[e].trim()&&(d+="."+c[e]);if(d){var f=$(d);1==f.length&&f[0]==a&&b.unshift(d)}}return b},registerEvent:function(a,b){var c=q.loadState();"STARTED"==c.status&&(c.steps.push({eventName:a,timeStamp:(new Date).getTime(),data:b}),q.saveState(c))},reportLog:function(a,b){if(m&&m.length)for(var c=0;c<m.length;c++)m[c].log(a,b,q)},reportError:function(a,b){if(m&&m.length)for(var c=0;c<m.length;c++)m[c].error(a,b,q)},registerSaveHandler:function(a){l.push(a)},registerReportHandler:function(a){m.push(a)},registerLoadHandler:function(a){n.push(a)},stopRecording:function(){var a=q.loadState(),b={name:prompt("Enter scenario name"),steps:a.steps};if(a.scenarios.push(b),a.status="NOT_STARTED",l&&l.length)for(var c=0;c<l.length;c++)l[c](b,q);q.saveState(a),q.reportLog("Recording Stopped",b)},loadState:function(){var a,b=localStorage.getItem("utme");return b?a=JSON.parse(b):(a={scenarios:[]},q.saveState(a)),a},saveState:function(a){localStorage.setItem("utme",JSON.stringify(a))},unload:function(){var a=q.loadState();a.status="NOT_STARTED",q.saveState(a)}};document.addEventListener("readystatechange",function(){if("complete"==document.readyState){q.init(),i(this,"STARTED"!=q.getStatus(),"Record Scenario","Stop Recording"),j(),g();var a=q.loadState();if("LOADED"==a.status){var b=k("utme_scenario");b&&setTimeout(function(){q.runScenario(b)},500)}else"STARTED"==a.status&&q.registerEvent("load",{url:window.location})}}),window.addEventListener("beforeunload",function(){q.unload()}),a.utme=q}(this,Simulate);var saveAs=saveAs||"undefined"!=typeof navigator&&navigator.msSaveOrOpenBlob&&navigator.msSaveOrOpenBlob.bind(navigator)||function(a){"use strict";if("undefined"==typeof navigator||!/MSIE [1-9]\./.test(navigator.userAgent)){var b=a.document,c=function(){return a.URL||a.webkitURL||a},d=b.createElementNS("http://www.w3.org/1999/xhtml","a"),e="download"in d,f=function(c){var d=b.createEvent("MouseEvents");d.initMouseEvent("click",!0,!1,a,0,0,0,0,0,!1,!1,!1,!1,0,null),c.dispatchEvent(d)},g=a.webkitRequestFileSystem,h=a.requestFileSystem||g||a.mozRequestFileSystem,i=function(b){(a.setImmediate||a.setTimeout)(function(){throw b},0)},j="application/octet-stream",k=0,l=10,m=function(b){var d=function(){"string"==typeof b?c().revokeObjectURL(b):b.remove()};a.chrome?d():setTimeout(d,l)},n=function(a,b,c){b=[].concat(b);for(var d=b.length;d--;){var e=a["on"+b[d]];if("function"==typeof e)try{e.call(a,c||a)}catch(f){i(f)}}},o=function(b,i){var l,o,p,q=this,r=b.type,s=!1,t=function(){n(q,"writestart progress write writeend".split(" "))},u=function(){if((s||!l)&&(l=c().createObjectURL(b)),o)o.location.href=l;else{var d=a.open(l,"_blank");void 0==d&&"undefined"!=typeof safari&&(a.location.href=l)}q.readyState=q.DONE,t(),m(l)},v=function(a){return function(){return q.readyState!==q.DONE?a.apply(this,arguments):void 0}},w={create:!0,exclusive:!1};return q.readyState=q.INIT,i||(i="download"),e?(l=c().createObjectURL(b),d.href=l,d.download=i,f(d),q.readyState=q.DONE,t(),void m(l)):(a.chrome&&r&&r!==j&&(p=b.slice||b.webkitSlice,b=p.call(b,0,b.size,j),s=!0),g&&"download"!==i&&(i+=".download"),(r===j||g)&&(o=a),h?(k+=b.size,void h(a.TEMPORARY,k,v(function(a){a.root.getDirectory("saved",w,v(function(a){var c=function(){a.getFile(i,w,v(function(a){a.createWriter(v(function(c){c.onwriteend=function(b){o.location.href=a.toURL(),q.readyState=q.DONE,n(q,"writeend",b),m(a)},c.onerror=function(){var a=c.error;a.code!==a.ABORT_ERR&&u()},"writestart progress write abort".split(" ").forEach(function(a){c["on"+a]=q["on"+a]}),c.write(b),q.abort=function(){c.abort(),q.readyState=q.DONE},q.readyState=q.WRITING}),u)}),u)};a.getFile(i,{create:!1},v(function(a){a.remove(),c()}),v(function(a){a.code===a.NOT_FOUND_ERR?c():u()}))}),u)}),u)):void u())},p=o.prototype,q=function(a,b){return new o(a,b)};return p.abort=function(){var a=this;a.readyState=a.DONE,n(a,"abort")},p.readyState=p.INIT=0,p.WRITING=1,p.DONE=2,p.error=p.onwritestart=p.onprogress=p.onwrite=p.onabort=p.onerror=p.onwriteend=null,q}}("undefined"!=typeof self&&self||"undefined"!=typeof window&&window||this.content);"undefined"!=typeof module&&null!==module?module.exports=saveAs:"undefined"!=typeof define&&null!==define&&null!=define.amd&&define([],function(){return saveAs}),function(a){a.registerSaveHandler(function(a){var b=new Blob([JSON.stringify(a)],{type:"text/plain;charset=utf-8"});saveAs(b,a.name+".json")})}(utme),function(a){function b(a){a=a.replace(/[\[]/,"\\[").replace(/[\]]/,"\\]");var b=new RegExp("[\\?&]"+a+"=([^&#]*)"),c=b.exec(location.search);return null===c?"":decodeURIComponent(c[1].replace(/\+/g," "))}var c={baseUrl:b("utme_test_server")||"http://0.0.0.0:9043/",error:function(a){$.ajax({type:"POST",url:c.baseUrl+"error",data:{data:a},dataType:"json"})},log:function(a){$.ajax({type:"POST",url:c.baseUrl+"log",data:{data:a},dataType:"json"}),console.log(a)},loadScenario:function(a,b){$.ajax({jsonp:"callback",url:c.baseUrl+"scenario/"+a,dataType:"jsonp",success:function(a){b(a)}})},saveScenario:function(a){$.ajax({type:"POST",url:c.baseUrl+"scenario",data:JSON.stringify(a),dataType:"json",contentType:"application/json"})}};a.registerReportHandler(c),a.registerLoadHandler(c.loadScenario),a.registerSaveHandler(c.saveScenario)}(utme,this);
+(function() {
+    !function($) {
+        var Selectorator, clean, contains, escapeSelector, extend, inArray, map, unique;
+        return map = $.map, extend = $.extend, inArray = $.inArray, contains = function(item, array) {
+            return -1 !== inArray(item, array);
+        }, escapeSelector = function(selector) {
+            return selector.replace(/([\!\"\#\$\%\&'\(\)\*\+\,\.\/\:\;<\=>\?\@\[\\\]\^\`\{\|\}\~])/g, "\\$1");
+        }, clean = function(arr, reject) {
+            return map(arr, function(item) {
+                return item === reject ? null : item;
+            });
+        }, unique = function(arr) {
+            return map(arr, function(item, index) {
+                return parseInt(index, 10) === parseInt(arr.indexOf(item), 10) ? item : null;
+            });
+        }, Selectorator = function() {
+            function Selectorator(element, options) {
+                this.element = element, this.options = extend(extend({}, $.selectorator.options), options), 
+                this.cachedResults = {};
+            }
+            return Selectorator.prototype.query = function(selector) {
+                var _base;
+                return (_base = this.cachedResults)[selector] || (_base[selector] = $(selector.replace(/#([^\s]+)/g, "[id='$1']")));
+            }, Selectorator.prototype.getProperTagName = function() {
+                return this.element[0] ? this.element[0].tagName.toLowerCase() : null;
+            }, Selectorator.prototype.hasParent = function() {
+                return this.element && 0 < this.element.parent().size();
+            }, Selectorator.prototype.isElement = function() {
+                var node;
+                return node = this.element[0], node && node.nodeType === node.ELEMENT_NODE;
+            }, Selectorator.prototype.validate = function(selector, parentSelector, single, isFirst) {
+                var delimiter, element;
+                if (null == single && (single = !0), null == isFirst && (isFirst = !1), element = this.query(selector), 
+                single && 1 < element.size() || !single && 0 === element.size()) {
+                    if (!parentSelector || -1 !== selector.indexOf(":")) return null;
+                    if (delimiter = isFirst ? " > " : " ", selector = parentSelector + delimiter + selector, 
+                    element = this.query(selector), single && 1 < element.size() || !single && 0 === element.size()) return null;
+                }
+                return contains(this.element[0], element.get()) ? selector : null;
+            }, Selectorator.prototype.generate = function() {
+                var fn, res, _i, _len, _ref;
+                if (!(this.element && this.hasParent() && this.isElement())) return [ "" ];
+                for (res = [], _ref = [ this.generateSimple, this.generateAncestor, this.generateRecursive ], 
+                _i = 0, _len = _ref.length; _len > _i; _i++) if (fn = _ref[_i], res = unique(clean(fn.call(this))), 
+                res && res.length > 0) return res;
+                return unique(res);
+            }, Selectorator.prototype.generateAncestor = function() {
+                var isFirst, parent, parentSelector, parentSelectors, results, selector, selectors, _i, _j, _k, _len, _len1, _len2, _ref;
+                for (results = [], _ref = this.element.parents(), _i = 0, _len = _ref.length; _len > _i; _i++) {
+                    for (parent = _ref[_i], isFirst = !0, selectors = this.generateSimple(null, !1), 
+                    _j = 0, _len1 = selectors.length; _len1 > _j; _j++) for (selector = selectors[_j], 
+                    parentSelectors = new Selectorator($(parent), this.options).generateSimple(null, !1), 
+                    _k = 0, _len2 = parentSelectors.length; _len2 > _k; _k++) parentSelector = parentSelectors[_k], 
+                    $.merge(results, this.generateSimple(parentSelector, !0, isFirst));
+                    isFirst = !1;
+                }
+                return results;
+            }, Selectorator.prototype.generateSimple = function(parentSelector, single, isFirst) {
+                var fn, res, self, tagName, validate, _i, _len, _ref;
+                for (self = this, tagName = self.getProperTagName(), validate = function(selector) {
+                    return self.validate(selector, parentSelector, single, isFirst);
+                }, _ref = [ [ self.getIdSelector ], [ self.getClassSelector ], [ self.getIdSelector, !0 ], [ self.getClassSelector, !0 ], [ self.getNameSelector ], [ function() {
+                    return [ self.getProperTagName() ];
+                } ] ], _i = 0, _len = _ref.length; _len > _i; _i++) if (fn = _ref[_i], res = fn[0].call(self, fn[1]) || [], 
+                res = clean(map(res, validate)), res.length > 0) return res;
+                return [];
+            }, Selectorator.prototype.generateRecursive = function() {
+                var index, parent, parentSelector, selector;
+                return selector = this.getProperTagName(), -1 !== selector.indexOf(":") && (selector = "*"), 
+                parent = this.element.parent(), parentSelector = new Selectorator(parent).generate()[0], 
+                index = parent.children(selector).index(this.element), selector = "" + selector + ":eq(" + index + ")", 
+                "" !== parentSelector && (selector = parentSelector + " > " + selector), [ selector ];
+            }, Selectorator.prototype.getIdSelector = function(tagName) {
+                var id;
+                return null == tagName && (tagName = !1), tagName = tagName ? this.getProperTagName() : "", 
+                id = this.element.attr("id"), "string" != typeof id || contains(id, this.getIgnore("id")) ? null : [ "" + tagName + "#" + escapeSelector(id) ];
+            }, Selectorator.prototype.getClassSelector = function(tagName) {
+                var classes, invalidClasses, tn;
+                return null == tagName && (tagName = !1), tn = this.getProperTagName(), /^(body|html)$/.test(tn) ? null : (tagName = tagName ? tn : "", 
+                invalidClasses = this.getIgnore("class"), classes = (this.element.attr("class") || "").replace(/\{.*\}/, "").split(/\s/), 
+                map(classes, function(klazz) {
+                    return klazz && !contains(klazz, invalidClasses) ? "" + tagName + "." + escapeSelector(klazz) : null;
+                }));
+            }, Selectorator.prototype.getNameSelector = function() {
+                var name, tagName;
+                return tagName = this.getProperTagName(), name = this.element.attr("name"), name && !contains(name, this.getIgnore("name")) ? [ "" + tagName + "[name='" + name + "']" ] : null;
+            }, Selectorator.prototype.getIgnore = function(key) {
+                var mulkey, opts, vals;
+                return opts = this.options.ignore || {}, mulkey = "class" === key ? "classes" : "" + key + "s", 
+                vals = opts[key] || opts[mulkey], "string" == typeof vals ? [ vals ] : vals;
+            }, Selectorator;
+        }(), $.selectorator = {
+            options: {},
+            unique: unique,
+            clean: clean,
+            escapeSelector: escapeSelector
+        }, $.fn.selectorator = function(options) {
+            return new Selectorator($(this), options);
+        }, $.fn.getSelector = function(options) {
+            return this.selectorator(options).generate();
+        }, this;
+    }(jQuery);
+}).call(this), function() {
+    function extend(dst, src) {
+        for (var key in src) dst[key] = src[key];
+        return src;
+    }
+    var Simulate = {
+        event: function(element, eventName, options) {
+            var evt;
+            document.createEvent ? (evt = document.createEvent("HTMLEvents"), evt.initEvent(eventName, "mouseenter" != eventName && "mouseleave" != eventName, !0), 
+            extend(evt, options), element.dispatchEvent(evt)) : (evt = document.createEventObject(), 
+            element.fireEvent("on" + eventName, evt));
+        },
+        keyEvent: function(element, type, options) {
+            var evt, e = {
+                bubbles: !0,
+                cancelable: !0,
+                view: window,
+                ctrlKey: !1,
+                altKey: !1,
+                shiftKey: !1,
+                metaKey: !1,
+                keyCode: 0,
+                charCode: 0
+            };
+            if (extend(e, options), document.createEvent) try {
+                evt = document.createEvent("KeyEvents"), evt.initKeyEvent(type, e.bubbles, e.cancelable, e.view, e.ctrlKey, e.altKey, e.shiftKey, e.metaKey, e.keyCode, e.charCode), 
+                element.dispatchEvent(evt);
+            } catch (err) {
+                evt = document.createEvent("Events"), evt.initEvent(type, e.bubbles, e.cancelable), 
+                extend(evt, {
+                    view: e.view,
+                    ctrlKey: e.ctrlKey,
+                    altKey: e.altKey,
+                    shiftKey: e.shiftKey,
+                    metaKey: e.metaKey,
+                    keyCode: e.keyCode,
+                    charCode: e.charCode
+                }), element.dispatchEvent(evt);
+            }
+        }
+    };
+    Simulate.keypress = function(element, chr) {
+        var charCode = chr.charCodeAt(0);
+        this.keyEvent(element, "keypress", {
+            keyCode: charCode,
+            charCode: charCode
+        });
+    }, Simulate.keydown = function(element, chr) {
+        var charCode = chr.charCodeAt(0);
+        this.keyEvent(element, "keydown", {
+            keyCode: charCode,
+            charCode: charCode
+        });
+    }, Simulate.keyup = function(element, chr) {
+        var charCode = chr.charCodeAt(0);
+        this.keyEvent(element, "keyup", {
+            keyCode: charCode,
+            charCode: charCode
+        });
+    };
+    for (var events = [ "click", "focus", "blur", "dblclick", "input", "change", "mousedown", "mousemove", "mouseout", "mouseover", "mouseup", "mouseenter", "mouseleave", "resize", "scroll", "select", "submit", "load", "unload" ], i = events.length; i--; ) {
+        var event = events[i];
+        Simulate[event] = function(evt) {
+            return function(element, options) {
+                this.event(element, evt, options);
+            };
+        }(event);
+    }
+    "undefined" != typeof module ? module.exports = Simulate : "undefined" != typeof window ? window.Simulate = Simulate : "undefined" != typeof define && define(function() {
+        return Simulate;
+    });
+}(), function(global, Simulate) {
+    function getScenario(name, callback) {
+        if (loadHandlers.length > 0) loadHandlers[0](name, callback); else for (var state = utme.loadState(), i = 0; i < state.scenarios.length; i++) state.scenarios[i].name == name && callback(state.scenarios[i]);
+    }
+    function runStep(scenario, idx) {
+        var step = scenario.steps[idx];
+        if (step) {
+            var state = utme.loadState();
+            if (state.runningScenario = scenario, state.runningStep = idx, utme.saveState(state), 
+            "load" == step.eventName) window.location = step.data.url.href; else {
+                var selectors = step.data.selectors;
+                tryUntilFound(selectors, function(eles) {
+                    if ("validate" === step.eventName) {
+                        var newText = $(eles[0]).text();
+                        if (newText != step.data.text) return utme.stopScenario(), void utme.reportError("Expected: " + step.data.text + ", but was: " + newText);
+                    }
+                    var ele = eles[0];
+                    if (events.indexOf(step.eventName) >= 0) {
+                        var options = {};
+                        step.data.button && (options.which = options.button = step.data.button), "click" == step.eventName ? $(ele).trigger("click") : "focus" != step.eventName && "blur" != step.eventName || !ele[step.eventName] ? Simulate[step.eventName](ele, options) : ele[step.eventName](), 
+                        ("undefined" != typeof ele.value || "undefined" != typeof step.data.value) && (ele.value = step.data.value, 
+                        Simulate.event(ele, "change"));
+                    }
+                    if ("keypress" == step.eventName) {
+                        var key = String.fromCharCode(step.data.keyCode);
+                        Simulate.keypress(ele, key), Simulate.keydown(ele, key), ele.value = step.data.value, 
+                        Simulate.event(ele, "change"), Simulate.keyup(ele, key);
+                    }
+                    runNextStep(scenario, idx);
+                }, function() {
+                    "validate" == step.eventName ? (utme.reportError("Could not find appropriate element for selectors: " + JSON.stringify(selectors) + " for event " + step.eventName), 
+                    utme.stopScenario()) : (utme.reportLog("Could not find appropriate element for selectors: " + JSON.stringify(selectors) + " for event " + step.eventName), 
+                    runNextStep(scenario, idx));
+                }, 500);
+            }
+        }
+    }
+    function tryUntilFound(selectors, callback, fail, timeout) {
+        function tryFind() {
+            for (var eles, foundTooMany = !1, foundValid = !1, i = 0; i < selectors.length; i++) {
+                if (eles = $(selectors[i]), 1 == eles.length) {
+                    foundValid = !0;
+                    break;
+                }
+                eles.length > 1 && (foundTooMany = !0);
+            }
+            foundValid ? callback(eles) : new Date().getTime() - started < timeout ? setTimeout(tryFind, 20) : fail();
+        }
+        var started = new Date().getTime();
+        tryFind();
+    }
+    function runNextStep(scenario, idx) {
+        scenario.steps.length > idx + 1 ? "mousemove" == scenario.steps[idx].eventName || scenario.steps[idx].eventName.indexOf("key") >= 0 || "verify" == scenario.steps[idx].eventName ? runStep(scenario, idx + 1) : (timeout = Math.max(getTimeout(scenario, idx, idx + 1) / 100, 50), 
+        setTimeout(function() {
+            runStep(scenario, idx + 1);
+        }, timeout)) : utme.stopScenario(!0);
+    }
+    function getTimeout(scenario, firstIndex, secondIndex) {
+        return scenario.steps[secondIndex].timeStamp - scenario.steps[firstIndex].timeStamp;
+    }
+    function initEventHandlers() {
+        for (var i = 0; i < events.length; i++) document.addEventListener(events[i], function(evt) {
+            var handler = function(e) {
+                if ("STARTED" == utme.getStatus() && e.target.hasAttribute && !e.target.hasAttribute("data-ignore")) {
+                    if (("mousedown" == evt || "click" == evt) && validating) return e.stopPropagation(), 
+                    utme.registerEvent("validate", {
+                        selectors: utme.findSelectors(e.target),
+                        text: $(e.target).text()
+                    }), !1;
+                    var args = {
+                        selectors: utme.findSelectors(e.target),
+                        value: e.target.value
+                    };
+                    (e.which || e.button) && (args.button = e.which || e.button), utme.registerEvent(evt, args);
+                }
+            };
+            return handler;
+        }(events[i]), !0);
+        var _to_ascii = {
+            "188": "44",
+            "109": "45",
+            "190": "46",
+            "191": "47",
+            "192": "96",
+            "220": "92",
+            "222": "39",
+            "221": "93",
+            "219": "91",
+            "173": "45",
+            "187": "61",
+            "186": "59",
+            "189": "45"
+        }, shiftUps = {
+            "96": "~",
+            "49": "!",
+            "50": "@",
+            "51": "#",
+            "52": "$",
+            "53": "%",
+            "54": "^",
+            "55": "&",
+            "56": "*",
+            "57": "(",
+            "48": ")",
+            "45": "_",
+            "61": "+",
+            "91": "{",
+            "93": "}",
+            "92": "|",
+            "59": ":",
+            "39": '"',
+            "44": "<",
+            "46": ">",
+            "47": "?"
+        };
+        document.addEventListener("keypress", function(e) {
+            if ("STARTED" == utme.getStatus() && !e.target.hasAttribute("data-ignore")) {
+                var c = e.which;
+                _to_ascii.hasOwnProperty(c) && (c = _to_ascii[c]), c = !e.shiftKey && c >= 65 && 90 >= c ? String.fromCharCode(c + 32) : e.shiftKey && shiftUps.hasOwnProperty(c) ? shiftUps[c] : String.fromCharCode(c), 
+                utme.registerEvent("keypress", {
+                    selectors: utme.findSelectors(e.target),
+                    key: c,
+                    prevValue: e.target.value,
+                    value: e.target.value + c,
+                    keyCode: e.keyCode
+                });
+            }
+        }, !0);
+    }
+    function createButton(text, classes, callback) {
+        var button = document.createElement("a");
+        return button.className = "utme-button " + classes, button.setAttribute("data-ignore", !0), 
+        button.innerHTML = text, button.addEventListener("click", callback), button;
+    }
+    function updateButtonText(ele, boolVal, ifTrue, ifFalse) {
+        ele.innerHTML = boolVal ? ifTrue : ifFalse;
+    }
+    function initControls() {
+        document.body.appendChild(createButton("Record Scenario", "start", function() {
+            var status = utme.getStatus();
+            "STARTED" == status ? utme.stopRecording() : utme.startRecording(), updateButtonText(this, "STARTED" == status, "Record Scenario", "Stop Recording");
+        })), document.body.appendChild(createButton("Run Scenario", "run", function() {
+            utme.runScenario();
+        })), document.body.appendChild(createButton("Verify", "verify", function() {
+            var status = utme.getStatus();
+            "STARTED" == status && (validating = !validating);
+        }));
+    }
+    function getParameterByName(name) {
+        name = name.replace(/[\[]/, "\\[").replace(/[\]]/, "\\]");
+        var regex = new RegExp("[\\?&]" + name + "=([^&#]*)"), results = regex.exec(location.search);
+        return null === results ? "" : decodeURIComponent(results[1].replace(/\+/g, " "));
+    }
+    var saveHandlers = [], reportHandlers = [], loadHandlers = [], validating = !1, events = [ "click", "focus", "blur", "dblclick", "mousedown", "mouseenter", "mouseleave", "mouseout", "mouseover", "mouseup" ], utme = {
+        init: function() {
+            var scenario = getParameterByName("utme_scenario");
+            if (scenario) localStorage.clear(), setTimeout(function() {
+                utme.runScenario(scenario);
+            }, 2e3); else {
+                var state = utme.loadState();
+                "RUNNING" === state.status ? runNextStep(state.runningScenario, state.runningStep) : (state.status = "LOADED", 
+                utme.saveState(state));
+            }
+        },
+        startRecording: function() {
+            localStorage.clear();
+            var state = utme.loadState();
+            "STARTED" != state.status && (state.status = "STARTED", state.steps = [], utme.saveState(state), 
+            utme.reportLog("Recording Started"));
+        },
+        runScenario: function(name) {
+            var toRun = name || prompt("Scenario to run");
+            getScenario(toRun, function(scenario) {
+                var state = utme.loadState();
+                state.status = "RUNNING", utme.saveState(state), utme.reportLog("Starting Scenario '" + name + "'", scenario), 
+                runStep(scenario, 0);
+            });
+        },
+        stopScenario: function(success) {
+            var state = utme.loadState(), scenario = state.runningScenario;
+            delete state.runningStep, delete state.runningScenario, state.status = "LOADED", 
+            utme.saveState(state), utme.reportLog("Stopping Scenario"), success && utme.reportLog("[SUCCESS] Scenario '" + scenario.name + "' Completed!");
+        },
+        getStatus: function() {
+            return utme.loadState().status;
+        },
+        findSelectors: function(element) {
+            var selectors = $(element).selectorator().generate();
+            return selectors;
+        },
+        registerEvent: function(eventName, data) {
+            var state = utme.loadState();
+            "STARTED" == state.status && (state.steps.push({
+                eventName: eventName,
+                timeStamp: new Date().getTime(),
+                data: data
+            }), utme.saveState(state));
+        },
+        reportLog: function(log, scenario) {
+            if (reportHandlers && reportHandlers.length) for (var i = 0; i < reportHandlers.length; i++) reportHandlers[i].log(log, scenario, utme);
+        },
+        reportError: function(error, scenario) {
+            if (reportHandlers && reportHandlers.length) for (var i = 0; i < reportHandlers.length; i++) reportHandlers[i].error(error, scenario, utme);
+        },
+        registerSaveHandler: function(handler) {
+            saveHandlers.push(handler);
+        },
+        registerReportHandler: function(handler) {
+            reportHandlers.push(handler);
+        },
+        registerLoadHandler: function(handler) {
+            loadHandlers.push(handler);
+        },
+        stopRecording: function() {
+            var state = utme.loadState(), newScenario = {
+                name: prompt("Enter scenario name"),
+                steps: state.steps
+            };
+            if (state.scenarios.push(newScenario), state.status = "NOT_STARTED", saveHandlers && saveHandlers.length) for (var i = 0; i < saveHandlers.length; i++) saveHandlers[i](newScenario, utme);
+            utme.saveState(state), utme.reportLog("Recording Stopped", newScenario);
+        },
+        loadState: function() {
+            var state, utmeStateStr = localStorage.getItem("utme");
+            return utmeStateStr ? state = JSON.parse(utmeStateStr) : (state = {
+                scenarios: []
+            }, utme.saveState(state)), state;
+        },
+        saveState: function(utmeState) {
+            localStorage.setItem("utme", JSON.stringify(utmeState));
+        },
+        unload: function() {
+            var state = utme.loadState();
+            state.status = "NOT_STARTED", utme.saveState(state);
+        }
+    };
+    document.addEventListener("readystatechange", function() {
+        "complete" == document.readyState && (utme.init(), updateButtonText(this, "STARTED" != utme.getStatus(), "Record Scenario", "Stop Recording"), 
+        initControls(), initEventHandlers(), "STARTED" == utme.loadState().status && utme.registerEvent("load", {
+            url: window.location
+        }));
+    }), window.addEventListener("beforeunload", function() {
+        localStorage.clear(), utme.unload();
+    }), window.addEventListener("error", function(err) {
+        utme.reportLog("Script Error: " + err.message + ":" + err.url + "," + err.line + ":" + err.col);
+    }), global.utme = utme;
+}(this, Simulate);
+
+var saveAs = saveAs || "undefined" != typeof navigator && navigator.msSaveOrOpenBlob && navigator.msSaveOrOpenBlob.bind(navigator) || function(view) {
+    "use strict";
+    if ("undefined" == typeof navigator || !/MSIE [1-9]\./.test(navigator.userAgent)) {
+        var doc = view.document, get_URL = function() {
+            return view.URL || view.webkitURL || view;
+        }, save_link = doc.createElementNS("http://www.w3.org/1999/xhtml", "a"), can_use_save_link = "download" in save_link, click = function(node) {
+            var event = doc.createEvent("MouseEvents");
+            event.initMouseEvent("click", !0, !1, view, 0, 0, 0, 0, 0, !1, !1, !1, !1, 0, null), 
+            node.dispatchEvent(event);
+        }, webkit_req_fs = view.webkitRequestFileSystem, req_fs = view.requestFileSystem || webkit_req_fs || view.mozRequestFileSystem, throw_outside = function(ex) {
+            (view.setImmediate || view.setTimeout)(function() {
+                throw ex;
+            }, 0);
+        }, force_saveable_type = "application/octet-stream", fs_min_size = 0, arbitrary_revoke_timeout = 10, revoke = function(file) {
+            var revoker = function() {
+                "string" == typeof file ? get_URL().revokeObjectURL(file) : file.remove();
+            };
+            view.chrome ? revoker() : setTimeout(revoker, arbitrary_revoke_timeout);
+        }, dispatch = function(filesaver, event_types, event) {
+            event_types = [].concat(event_types);
+            for (var i = event_types.length; i--; ) {
+                var listener = filesaver["on" + event_types[i]];
+                if ("function" == typeof listener) try {
+                    listener.call(filesaver, event || filesaver);
+                } catch (ex) {
+                    throw_outside(ex);
+                }
+            }
+        }, FileSaver = function(blob, name) {
+            var object_url, target_view, slice, filesaver = this, type = blob.type, blob_changed = !1, dispatch_all = function() {
+                dispatch(filesaver, "writestart progress write writeend".split(" "));
+            }, fs_error = function() {
+                if ((blob_changed || !object_url) && (object_url = get_URL().createObjectURL(blob)), 
+                target_view) target_view.location.href = object_url; else {
+                    var new_tab = view.open(object_url, "_blank");
+                    void 0 == new_tab && "undefined" != typeof safari && (view.location.href = object_url);
+                }
+                filesaver.readyState = filesaver.DONE, dispatch_all(), revoke(object_url);
+            }, abortable = function(func) {
+                return function() {
+                    return filesaver.readyState !== filesaver.DONE ? func.apply(this, arguments) : void 0;
+                };
+            }, create_if_not_found = {
+                create: !0,
+                exclusive: !1
+            };
+            return filesaver.readyState = filesaver.INIT, name || (name = "download"), can_use_save_link ? (object_url = get_URL().createObjectURL(blob), 
+            save_link.href = object_url, save_link.download = name, click(save_link), filesaver.readyState = filesaver.DONE, 
+            dispatch_all(), void revoke(object_url)) : (view.chrome && type && type !== force_saveable_type && (slice = blob.slice || blob.webkitSlice, 
+            blob = slice.call(blob, 0, blob.size, force_saveable_type), blob_changed = !0), 
+            webkit_req_fs && "download" !== name && (name += ".download"), (type === force_saveable_type || webkit_req_fs) && (target_view = view), 
+            req_fs ? (fs_min_size += blob.size, void req_fs(view.TEMPORARY, fs_min_size, abortable(function(fs) {
+                fs.root.getDirectory("saved", create_if_not_found, abortable(function(dir) {
+                    var save = function() {
+                        dir.getFile(name, create_if_not_found, abortable(function(file) {
+                            file.createWriter(abortable(function(writer) {
+                                writer.onwriteend = function(event) {
+                                    target_view.location.href = file.toURL(), filesaver.readyState = filesaver.DONE, 
+                                    dispatch(filesaver, "writeend", event), revoke(file);
+                                }, writer.onerror = function() {
+                                    var error = writer.error;
+                                    error.code !== error.ABORT_ERR && fs_error();
+                                }, "writestart progress write abort".split(" ").forEach(function(event) {
+                                    writer["on" + event] = filesaver["on" + event];
+                                }), writer.write(blob), filesaver.abort = function() {
+                                    writer.abort(), filesaver.readyState = filesaver.DONE;
+                                }, filesaver.readyState = filesaver.WRITING;
+                            }), fs_error);
+                        }), fs_error);
+                    };
+                    dir.getFile(name, {
+                        create: !1
+                    }, abortable(function(file) {
+                        file.remove(), save();
+                    }), abortable(function(ex) {
+                        ex.code === ex.NOT_FOUND_ERR ? save() : fs_error();
+                    }));
+                }), fs_error);
+            }), fs_error)) : void fs_error());
+        }, FS_proto = FileSaver.prototype, saveAs = function(blob, name) {
+            return new FileSaver(blob, name);
+        };
+        return FS_proto.abort = function() {
+            var filesaver = this;
+            filesaver.readyState = filesaver.DONE, dispatch(filesaver, "abort");
+        }, FS_proto.readyState = FS_proto.INIT = 0, FS_proto.WRITING = 1, FS_proto.DONE = 2, 
+        FS_proto.error = FS_proto.onwritestart = FS_proto.onprogress = FS_proto.onwrite = FS_proto.onabort = FS_proto.onerror = FS_proto.onwriteend = null, 
+        saveAs;
+    }
+}("undefined" != typeof self && self || "undefined" != typeof window && window || this.content);
+
+"undefined" != typeof module && null !== module ? module.exports = saveAs : "undefined" != typeof define && null !== define && null != define.amd && define([], function() {
+    return saveAs;
+}), function(utme) {
+    utme.registerSaveHandler(function(scenario) {
+        var blob = new Blob([ JSON.stringify(scenario) ], {
+            type: "text/plain;charset=utf-8"
+        });
+        saveAs(blob, scenario.name + ".json");
+    });
+}(utme), function(utme) {
+    function getParameterByName(name) {
+        name = name.replace(/[\[]/, "\\[").replace(/[\]]/, "\\]");
+        var regex = new RegExp("[\\?&]" + name + "=([^&#]*)"), results = regex.exec(location.search);
+        return null === results ? "" : decodeURIComponent(results[1].replace(/\+/g, " "));
+    }
+    var serverReporter = {
+        baseUrl: getParameterByName("utme_test_server") || "http://0.0.0.0:9043/",
+        error: function(error) {
+            $.ajax({
+                type: "POST",
+                url: serverReporter.baseUrl + "error",
+                data: {
+                    data: error
+                },
+                dataType: "json"
+            }), console.error(error);
+        },
+        log: function(log) {
+            $.ajax({
+                type: "POST",
+                url: serverReporter.baseUrl + "log",
+                data: {
+                    data: log
+                },
+                dataType: "json"
+            }), console.log(log);
+        },
+        loadScenario: function(name, callback) {
+            $.ajax({
+                jsonp: "callback",
+                url: serverReporter.baseUrl + "scenario/" + name,
+                dataType: "jsonp",
+                success: function(resp) {
+                    callback(resp);
+                }
+            });
+        },
+        saveScenario: function(scenario) {
+            $.ajax({
+                type: "POST",
+                url: serverReporter.baseUrl + "scenario",
+                data: JSON.stringify(scenario),
+                dataType: "json",
+                contentType: "application/json"
+            });
+        }
+    };
+    utme.registerReportHandler(serverReporter), utme.registerLoadHandler(serverReporter.loadScenario), 
+    utme.registerSaveHandler(serverReporter.saveScenario);
+}(utme, this);
