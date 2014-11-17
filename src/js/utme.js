@@ -10,7 +10,7 @@
         if (loadHandlers.length > 0) {
             loadHandlers[0](name, callback);
         } else {
-            var state = utme.loadState();
+            var state = utme.state;
             for (var i = 0; i < state.scenarios.length; i++) {
                 if (state.scenarios[i].name == name) {
                     callback(state.scenarios[i]);
@@ -45,10 +45,10 @@
     function runStep(scenario, idx) {
         var step = scenario.steps[idx];
         if (step) {
-            var state = utme.loadState();
+            var state = utme.state;
             state.runningScenario = scenario;
             state.runningStep = idx;
-            utme.saveState(state);
+            utme.saveStateToStorage(state);
             if (step.eventName == 'load') {
                 window.location = step.data.url.href;
             } else {
@@ -163,7 +163,9 @@
         return scenario.steps[secondIndex].timeStamp - scenario.steps[firstIndex].timeStamp;
     }
 
+    var state;
     var utme = {
+        state: state,
         init: function() {
           var scenario = getParameterByName('utme_scenario');
           if (scenario) {
@@ -172,31 +174,26 @@
                   utme.runScenario(scenario);
               }, 2000);
           } else {
-              var state = utme.loadState();
+              state = utme.state = utme.loadStateFromStorage();
               if (state.status === "RUNNING") {
                   runNextStep(state.runningScenario, state.runningStep);
-              } else {
+              } else if (!state.status) {
                   state.status = "LOADED";
-                  utme.saveState(state);
               }
           }
         },
         startRecording: function() {
             localStorage.clear();
-            var state = utme.loadState();
             if (state.status != 'STARTED') {
                 state.status = 'STARTED';
                 state.steps = [];
-                utme.saveState(state);
                 utme.reportLog("Recording Started");
             }
         },
         runScenario: function(name) {
             var toRun = name || prompt('Scenario to run');
             getScenario(toRun, function(scenario) {
-                var state = utme.loadState();
                 state.status = "RUNNING";
-                utme.saveState(state);
 
                 utme.reportLog("Starting Scenario '" + name + "'", scenario);
 
@@ -204,13 +201,10 @@
             });
         },
         stopScenario: function(success) {
-            var state = utme.loadState();
             var scenario = state.runningScenario;
             delete state.runningStep;
             delete state.runningScenario;
             state.status = "LOADED";
-
-            utme.saveState(state);
 
             utme.reportLog("Stopping Scenario");
 
@@ -219,7 +213,7 @@
             }
         },
         getStatus: function() {
-            return utme.loadState().status;
+            return utme.state.status;
         },
         findSelectors: function (element) {
             var selectors = $(element).selectorator().generate();
@@ -242,14 +236,12 @@
             return selectors;
         },
         registerEvent: function(eventName, data) {
-            var state = utme.loadState();
             if (state.status == 'STARTED') {
                 state.steps.push({
                     eventName: eventName,
                     timeStamp: new Date().getTime(),
                     data: data
                 });
-                utme.saveState(state);
             }
         },
         reportLog: function (log, scenario) {
@@ -276,46 +268,44 @@
             loadHandlers.push(handler);
         },
         stopRecording: function() {
-            var state = utme.loadState();
             var newScenario = {
                 name: prompt('Enter scenario name'),
                 steps: state.steps
             };
-            state.scenarios.push(newScenario);
-            state.status = 'NOT_STARTED';
+            if (newScenario.name) {
+                state.scenarios.push(newScenario);
 
-            if (saveHandlers && saveHandlers.length) {
-                for (var i = 0; i < saveHandlers.length; i++) {
-                    saveHandlers[i](newScenario, utme);
+                if (saveHandlers && saveHandlers.length) {
+                    for (var i = 0; i < saveHandlers.length; i++) {
+                        saveHandlers[i](newScenario, utme);
+                    }
                 }
             }
+            state.status = 'LOADED';
 
-            utme.saveState(state);
             utme.reportLog("Recording Stopped", newScenario);
         },
 
-        loadState: function () {
+        loadStateFromStorage: function () {
             var utmeStateStr = localStorage.getItem('utme');
-            var state;
             if (utmeStateStr) {
                 state = JSON.parse(utmeStateStr);
             } else {
                 state = {
                    scenarios: []
                 };
-                utme.saveState(state);
             }
             return state;
         },
 
-        saveState: function (utmeState) {
+        saveStateToStorage: function (utmeState) {
             localStorage.setItem('utme', JSON.stringify(utmeState));
         },
 
         unload: function() {
-            var state = utme.loadState();
-            state.status = 'NOT_STARTED';
-            utme.saveState(state);
+            // var state = utme.loadStateFromStorage();
+            // state.status = 'NOT_STARTED';
+            utme.saveStateToStorage(state);
         }
     };
 
@@ -438,29 +428,65 @@
         return button;
     }
 
-    function updateButtonText(ele, boolVal, ifTrue, ifFalse) {
-        ele.innerHTML = boolVal ? ifTrue : ifFalse;
+    function updateButton(ele, text, disabled) {
+        if (disabled) {
+            ele.className = ele.className + " " + "disabled";
+        } else {
+            ele.className = (ele.className || "").replace(/ disabled/g, "");
+        }
+
+        ele.innerHTML = text;
     }
 
     function initControls() {
-        document.body.appendChild(createButton('Record Scenario', 'start', function() {
+        var buttonBar = document.createElement('div');
+        buttonBar.className = 'utme-bar';
+
+        function updateButtonStates() {
             var status = utme.getStatus();
-            if (status == 'STARTED') {
+            updateButton(recordButton, status == 'STARTED' ? 'Stop Recording' : 'Record Scenario', validating || status == 'RUNNING');
+            updateButton(runButton, status == 'RUNNING' ? 'Stop Running' : 'Run Scenario', validating || status == 'STARTED');
+            updateButton(validateButton, validating ? 'Done Validating' : 'Validate', status != 'STARTED');
+        }
+
+        var recordButton = createButton('Record Scenario', 'start', function() {
+            var oldStatus = utme.getStatus();
+            if (oldStatus == 'STARTED') {
                 utme.stopRecording();
             } else {
                 utme.startRecording();
             }
 
-            updateButtonText(this, status == 'STARTED', 'Record Scenario', 'Stop Recording');
-        }));
-        document.body.appendChild(createButton('Run Scenario', 'run', function() { utme.runScenario(); }));
+            updateButtonStates();
+        });
 
-        document.body.appendChild(createButton('Verify', 'verify', function() {
-              var status = utme.getStatus();
-              if (status == 'STARTED') {
-                  validating = !validating;
-              }
-        }));
+        var runButton = createButton('Run Scenario', 'run', function() {
+            var oldStatus = utme.getStatus();
+            if (oldStatus == 'LOADED') {
+                utme.runScenario();
+            } else {
+                utme.stopScenario(false);
+            }
+
+            updateButtonStates();
+        });
+
+        var validateButton = createButton('Validate', 'verify', function() {
+            var status = utme.getStatus();
+            if (status == 'STARTED') {
+                validating = !validating;
+            }
+
+            updateButtonStates();
+        });
+
+        updateButtonStates();
+
+        buttonBar.appendChild(recordButton);
+        buttonBar.appendChild(runButton);
+        buttonBar.appendChild(validateButton);
+
+        document.body.appendChild(buttonBar);
     }
 
     function getParameterByName(name) {
@@ -474,12 +500,12 @@
         if (document.readyState == "complete") {
             utme.init();
 
-            updateButtonText(this, utme.getStatus() != 'STARTED', 'Record Scenario', 'Stop Recording');
+            updateButton(this, utme.getStatus() != 'STARTED', 'Record Scenario', 'Stop Recording');
 
             initControls();
             initEventHandlers();
 
-            if (utme.loadState().status == 'STARTED') {
+            if (utme.state.status == 'STARTED') {
                 utme.registerEvent("load", {
                     url: window.location
                 });
@@ -488,10 +514,9 @@
 
     });
 
-    window.addEventListener('beforeunload', function() {
-        localStorage.clear();
+    window.addEventListener('unload', function() {
         utme.unload();
-    });
+    }, true);
 
     window.addEventListener('error', function(err) {
         utme.reportLog("Script Error: " + err.message + ":" + err.url + "," + err.line + ":" + err.col);

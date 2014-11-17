@@ -1,7 +1,12 @@
+.utme-bar {
+    position: fixed;
+    right: 50%;
+    bottom: 0;
+    width: 300px;
+    margin-right: -150px;
+}
+
 .utme-button {
-  position: fixed;
-  right: 50%;
-  bottom: 0;
   border: 1px solid #ccc;
   border-bottom: 0;
   border-right: 0;
@@ -9,12 +14,11 @@
   color: #444;
   font-size: 11px;
   padding: 6px;
-  margin-right: -40px;
   box-shadow: -1px -1px 2px rgba(0,0,0,.5);
   border-radius: 2px 0 0;
   text-decoration: none;
   font-weight: 700;
-  display: block;
+  display: inline-block;
   white-space: nowrap;
   font-family: arial,FreeSans,Helvetica,sans-serif;
   -webkit-box-shadow: 5px 5px 10px rgba(0,0,0,.5);
@@ -22,13 +26,18 @@
   -moz-border-radius: 0 0 5px 5px;
 }
 
+.utme-button.disabled {
+  color: lightgray;
+}
+
+/*
 .utme-button.start {
   margin-right: 80px
 }
 
 .utme-button.run {
   margin-right: 0px
-}
+}*/
 
 .utme-verify {
     background-color: lightblue !important;

@@ -173,13 +173,13 @@
     });
 }(), function(global, Simulate) {
     function getScenario(name, callback) {
-        if (loadHandlers.length > 0) loadHandlers[0](name, callback); else for (var state = utme.loadState(), i = 0; i < state.scenarios.length; i++) state.scenarios[i].name == name && callback(state.scenarios[i]);
+        for (var state = utme.state, i = 0; i < state.scenarios.length; i++) state.scenarios[i].name == name && callback(state.scenarios[i]);
     }
     function runStep(scenario, idx) {
         var step = scenario.steps[idx];
         if (step) {
-            var state = utme.loadState();
-            if (state.runningScenario = scenario, state.runningStep = idx, utme.saveState(state), 
+            var state = utme.state;
+            if (state.runningScenario = scenario, state.runningStep = idx, utme.saveStateToStorage(state), 
             "load" == step.eventName) window.location = step.data.url.href; else {
                 var selectors = step.data.selectors;
                 tryUntilFound(selectors, function(eles) {
@@ -305,69 +305,74 @@
         return button.className = "utme-button " + classes, button.setAttribute("data-ignore", !0), 
         button.innerHTML = text, button.addEventListener("click", callback), button;
     }
-    function updateButtonText(ele, boolVal, ifTrue, ifFalse) {
-        ele.innerHTML = boolVal ? ifTrue : ifFalse;
+    function updateButton(ele, text, disabled) {
+        ele.className = disabled ? ele.className + " disabled" : (ele.className || "").replace(/ disabled/g, ""), 
+        ele.innerHTML = text;
     }
     function initControls() {
-        document.body.appendChild(createButton("Record Scenario", "start", function() {
+        function updateButtonStates() {
             var status = utme.getStatus();
-            "STARTED" == status ? utme.stopRecording() : utme.startRecording(), updateButtonText(this, "STARTED" == status, "Record Scenario", "Stop Recording");
-        })), document.body.appendChild(createButton("Run Scenario", "run", function() {
-            utme.runScenario();
-        })), document.body.appendChild(createButton("Verify", "verify", function() {
+            updateButton(recordButton, "STARTED" == status ? "Stop Recording" : "Record Scenario", validating || "RUNNING" == status), 
+            updateButton(runButton, "RUNNING" == status ? "Stop Running" : "Run Scenario", validating || "STARTED" == status), 
+            updateButton(validateButton, validating ? "Done Validating" : "Validate", "STARTED" != status);
+        }
+        var buttonBar = document.createElement("div");
+        buttonBar.className = "utme-bar";
+        var recordButton = createButton("Record Scenario", "start", function() {
+            var oldStatus = utme.getStatus();
+            "STARTED" == oldStatus ? utme.stopRecording() : utme.startRecording(), updateButtonStates();
+        }), runButton = createButton("Run Scenario", "run", function() {
+            var oldStatus = utme.getStatus();
+            "LOADED" == oldStatus ? utme.runScenario() : utme.stopScenario(!1), updateButtonStates();
+        }), validateButton = createButton("Validate", "verify", function() {
             var status = utme.getStatus();
-            "STARTED" == status && (validating = !validating);
-        }));
+            "STARTED" == status && (validating = !validating), updateButtonStates();
+        });
+        updateButtonStates(), buttonBar.appendChild(recordButton), buttonBar.appendChild(runButton), 
+        buttonBar.appendChild(validateButton), document.body.appendChild(buttonBar);
     }
     function getParameterByName(name) {
         name = name.replace(/[\[]/, "\\[").replace(/[\]]/, "\\]");
         var regex = new RegExp("[\\?&]" + name + "=([^&#]*)"), results = regex.exec(location.search);
         return null === results ? "" : decodeURIComponent(results[1].replace(/\+/g, " "));
     }
-    var saveHandlers = [], reportHandlers = [], loadHandlers = [], validating = !1, events = [ "click", "focus", "blur", "dblclick", "mousedown", "mouseenter", "mouseleave", "mouseout", "mouseover", "mouseup" ], utme = {
+    var state, saveHandlers = [], reportHandlers = [], loadHandlers = [], validating = !1, events = [ "click", "focus", "blur", "dblclick", "mousedown", "mouseenter", "mouseleave", "mouseout", "mouseover", "mouseup" ], utme = {
+        state: state,
         init: function() {
             var scenario = getParameterByName("utme_scenario");
-            if (scenario) localStorage.clear(), setTimeout(function() {
+            scenario ? (localStorage.clear(), setTimeout(function() {
                 utme.runScenario(scenario);
-            }, 2e3); else {
-                var state = utme.loadState();
-                "RUNNING" === state.status ? runNextStep(state.runningScenario, state.runningStep) : (state.status = "LOADED", 
-                utme.saveState(state));
-            }
+            }, 2e3)) : (state = utme.state = utme.loadStateFromStorage(), "RUNNING" === state.status ? runNextStep(state.runningScenario, state.runningStep) : state.status || (state.status = "LOADED"));
         },
         startRecording: function() {
-            localStorage.clear();
-            var state = utme.loadState();
-            "STARTED" != state.status && (state.status = "STARTED", state.steps = [], utme.saveState(state), 
+            localStorage.clear(), "STARTED" != state.status && (state.status = "STARTED", state.steps = [], 
             utme.reportLog("Recording Started"));
         },
         runScenario: function(name) {
             var toRun = name || prompt("Scenario to run");
             getScenario(toRun, function(scenario) {
-                var state = utme.loadState();
-                state.status = "RUNNING", utme.saveState(state), utme.reportLog("Starting Scenario '" + name + "'", scenario), 
+                state.status = "RUNNING", utme.reportLog("Starting Scenario '" + name + "'", scenario), 
                 runStep(scenario, 0);
             });
         },
         stopScenario: function(success) {
-            var state = utme.loadState(), scenario = state.runningScenario;
+            var scenario = state.runningScenario;
             delete state.runningStep, delete state.runningScenario, state.status = "LOADED", 
-            utme.saveState(state), utme.reportLog("Stopping Scenario"), success && utme.reportLog("[SUCCESS] Scenario '" + scenario.name + "' Completed!");
+            utme.reportLog("Stopping Scenario"), success && utme.reportLog("[SUCCESS] Scenario '" + scenario.name + "' Completed!");
         },
         getStatus: function() {
-            return utme.loadState().status;
+            return utme.state.status;
         },
         findSelectors: function(element) {
             var selectors = $(element).selectorator().generate();
             return selectors;
         },
         registerEvent: function(eventName, data) {
-            var state = utme.loadState();
-            "STARTED" == state.status && (state.steps.push({
+            "STARTED" == state.status && state.steps.push({
                 eventName: eventName,
                 timeStamp: new Date().getTime(),
                 data: data
-            }), utme.saveState(state));
+            });
         },
         reportLog: function(log, scenario) {
             if (reportHandlers && reportHandlers.length) for (var i = 0; i < reportHandlers.length; i++) reportHandlers[i].log(log, scenario, utme);
@@ -385,35 +390,34 @@
             loadHandlers.push(handler);
         },
         stopRecording: function() {
-            var state = utme.loadState(), newScenario = {
+            var newScenario = {
                 name: prompt("Enter scenario name"),
                 steps: state.steps
             };
-            if (state.scenarios.push(newScenario), state.status = "NOT_STARTED", saveHandlers && saveHandlers.length) for (var i = 0; i < saveHandlers.length; i++) saveHandlers[i](newScenario, utme);
-            utme.saveState(state), utme.reportLog("Recording Stopped", newScenario);
+            if (newScenario.name && (state.scenarios.push(newScenario), saveHandlers && saveHandlers.length)) for (var i = 0; i < saveHandlers.length; i++) saveHandlers[i](newScenario, utme);
+            state.status = "LOADED", utme.reportLog("Recording Stopped", newScenario);
         },
-        loadState: function() {
-            var state, utmeStateStr = localStorage.getItem("utme");
-            return utmeStateStr ? state = JSON.parse(utmeStateStr) : (state = {
+        loadStateFromStorage: function() {
+            var utmeStateStr = localStorage.getItem("utme");
+            return state = utmeStateStr ? JSON.parse(utmeStateStr) : {
                 scenarios: []
-            }, utme.saveState(state)), state;
+            };
         },
-        saveState: function(utmeState) {
+        saveStateToStorage: function(utmeState) {
             localStorage.setItem("utme", JSON.stringify(utmeState));
         },
         unload: function() {
-            var state = utme.loadState();
-            state.status = "NOT_STARTED", utme.saveState(state);
+            utme.saveStateToStorage(state);
         }
     };
     document.addEventListener("readystatechange", function() {
-        "complete" == document.readyState && (utme.init(), updateButtonText(this, "STARTED" != utme.getStatus(), "Record Scenario", "Stop Recording"), 
-        initControls(), initEventHandlers(), "STARTED" == utme.loadState().status && utme.registerEvent("load", {
+        "complete" == document.readyState && (utme.init(), updateButton(this, "STARTED" != utme.getStatus(), "Record Scenario", "Stop Recording"), 
+        initControls(), initEventHandlers(), "STARTED" == utme.state.status && utme.registerEvent("load", {
             url: window.location
         }));
-    }), window.addEventListener("beforeunload", function() {
-        localStorage.clear(), utme.unload();
-    }), window.addEventListener("error", function(err) {
+    }), window.addEventListener("unload", function() {
+        utme.unload();
+    }, !0), window.addEventListener("error", function(err) {
         utme.reportLog("Script Error: " + err.message + ":" + err.url + "," + err.line + ":" + err.col);
     }), global.utme = utme;
 }(this, Simulate);
