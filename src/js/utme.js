@@ -301,7 +301,11 @@
         },
 
         saveStateToStorage: function (utmeState) {
-            localStorage.setItem('utme', JSON.stringify(utmeState));
+            if (utmeState) {
+                localStorage.setItem('utme', JSON.stringify(utmeState));
+            } else {
+                localStorage.removeItem('utme');
+            }
         },
 
         unload: function() {
