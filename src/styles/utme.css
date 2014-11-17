@@ -29,3 +29,7 @@
 .utme-button.run {
   margin-right: 0px
 }
+
+.utme-verify {
+    background-color: lightblue !important;
+}

@@ -235,8 +235,8 @@
         for (var i = 0; i < events.length; i++) document.addEventListener(events[i], function(evt) {
             var handler = function(e) {
                 if ("STARTED" == utme.getStatus() && e.target.hasAttribute && !e.target.hasAttribute("data-ignore")) {
-                    if (("mousedown" == evt || "click" == evt) && validating) return e.stopPropagation(), 
-                    utme.registerEvent("validate", {
+                    if (validating) return e.stopPropagation(), e.preventDefault(), "mouseover" == evt && $(e.target).addClass("utme-verify"), 
+                    "mouseout" == evt && $(e.target).removeClass("utme-verify"), ("click" == evt || "mousedown" == evt) && utme.registerEvent("validate", {
                         selectors: utme.findSelectors(e.target),
                         text: $(e.target).text()
                     }), !1;

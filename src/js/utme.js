@@ -324,12 +324,21 @@
             document.addEventListener(events[i], (function(evt) {
                 var handler = function(e) {
                   if (utme.getStatus() == 'STARTED' && e.target.hasAttribute && !e.target.hasAttribute('data-ignore')) {
-                      if ((evt == 'mousedown' || evt == 'click') && validating) {
+                      if (validating) {
                           e.stopPropagation();
-                          utme.registerEvent('validate', {
-                              selectors: utme.findSelectors(e.target),
-                              text: $(e.target).text()
-                          });
+                          e.preventDefault();
+                          if (evt == 'mouseover') {
+                              $(e.target).addClass('utme-verify');
+                          }
+                          if (evt == 'mouseout') {
+                              $(e.target).removeClass('utme-verify');
+                          }
+                          if (evt == 'click' || evt == 'mousedown') {
+                            utme.registerEvent('validate', {
+                                selectors: utme.findSelectors(e.target),
+                                text: $(e.target).text()
+                            });
+                          }
                           return false;
                       } else {
                           var args =  {
