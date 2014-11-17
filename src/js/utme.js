@@ -148,7 +148,7 @@
                 scenario.steps[idx].eventName == 'verify') {
               runStep(scenario, idx + 1);
             } else {
-              timeout = Math.max(getTimeout(scenario, idx, idx + 1) / 100, 50);
+              timeout = Math.max(getTimeout(scenario, idx, idx + 1) / 100, 100);
 
               setTimeout(function() {
                 runStep(scenario, idx + 1);
@@ -170,6 +170,7 @@
           var scenario = getParameterByName('utme_scenario');
           if (scenario) {
               localStorage.clear();
+              state = utme.state = utme.loadStateFromStorage();
               setTimeout(function() {
                   utme.runScenario(scenario);
               }, 2000);
@@ -292,6 +293,7 @@
                 state = JSON.parse(utmeStateStr);
             } else {
                 state = {
+                   status: "INITIALIZING",
                    scenarios: []
                 };
             }
@@ -499,8 +501,6 @@
     document.addEventListener('readystatechange', function() {
         if (document.readyState == "complete") {
             utme.init();
-
-            updateButton(this, utme.getStatus() != 'STARTED', 'Record Scenario', 'Stop Recording');
 
             initControls();
             initEventHandlers();
