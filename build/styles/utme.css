@@ -4,6 +4,7 @@
     bottom: 0;
     width: 300px;
     margin-right: -150px;
+    z-index: 20000;
 }
 
 .utme-button {

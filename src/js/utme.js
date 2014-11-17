@@ -184,7 +184,6 @@
           }
         },
         startRecording: function() {
-            localStorage.clear();
             if (state.status != 'STARTED') {
                 state.status = 'STARTED';
                 state.steps = [];
@@ -481,6 +480,11 @@
             var status = utme.getStatus();
             if (status == 'STARTED') {
                 validating = !validating;
+
+                // // We just finished validating
+                // if (!validating) {
+                //     var sectionName = prompt("Please enter a validation step name:");
+                // }
             }
 
             updateButtonStates();
