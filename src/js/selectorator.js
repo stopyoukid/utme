@@ -218,7 +218,7 @@
 
       Selectorator.prototype.query = function(selector) {
         var _base;
-        return (_base = this.cachedResults)[selector] || (_base[selector] = $(selector.replace(/#([^\s]+)/g, "[id='$1']")));
+        return (_base = this.cachedResults)[selector] || (_base[selector] = document.querySelectorAll(selector.replace(/#([^\s]+)/g, "[id='$1']")));
       };
 
       Selectorator.prototype.getProperTagName = function() {
@@ -248,19 +248,19 @@
           isFirst = false;
         }
         element = this.query(selector);
-        if (single && 1 < element.size() || !single && 0 === element.size()) {
+        if (single && 1 < element.length || !single && 0 === element.length) {
           if (parentSelector && selector.indexOf(':') === -1) {
             delimiter = isFirst ? ' > ' : ' ';
             selector = parentSelector + delimiter + selector;
             element = this.query(selector);
-            if (single && 1 < element.size() || !single && 0 === element.size()) {
+            if (single && 1 < element.length || !single && 0 === element.length) {
               return null;
             }
           } else {
             return null;
           }
         }
-        if (contains(this.element[0], element.get())) {
+        if (contains(this.element[0], element)) {
           return selector;
         } else {
           return null;
@@ -342,6 +342,26 @@
         selector = "" + selector + ":eq(" + index + ")";
         if (parentSelector !== '') {
           selector = parentSelector + " > " + selector;
+        }
+        return [selector];
+      };
+
+      Selectorator.prototype.generateRecursiveSimple = function() {
+        var index, parent, parentSelector, selector;
+        selector = this.getProperTagName();
+        if (selector.indexOf(':') !== -1) {
+          selector = '*';
+        }
+
+        parent = this.element.parent();
+        if (parent[0] != document) {
+            parentSelector = new Selectorator(parent).generateRecursiveSimple()[0];
+        }
+
+        index = parent.children(selector).index(this.element);
+        selector = "" + selector + ":eq(" + index + ")";
+        if (parentSelector !== '') {
+          selector = (parentSelector ? parentSelector + " > " : "") + selector;
         }
         return [selector];
       };

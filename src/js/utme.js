@@ -7,16 +7,16 @@
     var loadHandlers = [];
 
     function getScenario(name, callback) {
-        if (loadHandlers.length > 0) {
-            loadHandlers[0](name, callback);
-        } else {
+        // if (loadHandlers.length > 0) {
+        //     loadHandlers[0](name, callback);
+        // } else {
             var state = utme.state;
             for (var i = 0; i < state.scenarios.length; i++) {
                 if (state.scenarios[i].name == name) {
                     callback(state.scenarios[i]);
                 }
             }
-        }
+        // }
     }
     var validating = false;
 
@@ -44,8 +44,8 @@
 
     function runStep(scenario, idx) {
         var step = scenario.steps[idx];
-        if (step) {
-            var state = utme.state;
+        var state = utme.state;
+        if (step && state.status == 'PLAYING') {
             state.runningScenario = scenario;
             state.runningStep = idx;
             utme.saveStateToStorage(state);
@@ -104,7 +104,7 @@
                         utme.reportLog('Could not find appropriate element for selectors: ' + JSON.stringify(selectors) + " for event " + step.eventName);
                         runNextStep(scenario, idx);
                     }
-                }, 500);
+                }, 100);
             }
         } else {
 
@@ -119,7 +119,7 @@
             var foundTooMany = false;
             var foundValid = false;
             for (var i = 0; i < selectors.length; i++) {
-                eles = $(selectors[i]);
+                eles = $(selectors[i] + ":visible");
                 if (eles.length == 1) {
                     foundValid = true;
                     break;
@@ -148,11 +148,11 @@
                 scenario.steps[idx].eventName == 'verify') {
               runStep(scenario, idx + 1);
             } else {
-              timeout = Math.max(getTimeout(scenario, idx, idx + 1) / 100, 100);
+              // timeout = Math.max(getTimeout(scenario, idx, idx + 1) / 100, 100);
 
               setTimeout(function() {
                 runStep(scenario, idx + 1);
-              }, timeout);
+              }, 10);
             }
         } else {
             utme.stopScenario(true);
@@ -163,6 +163,26 @@
         return scenario.steps[secondIndex].timeStamp - scenario.steps[firstIndex].timeStamp;
     }
 
+    function simplifySteps(steps) {
+      var eleStack = [];
+      // Scrub short events
+      for (var i = 0; i < steps.length; i++) {
+        var step = steps[i];
+        if (step.eventName == 'mouseenter') {
+          eleStack.push({ idx: i, step: step });
+        } else if (step.eventName == 'mouseleave') {
+          var oStepInfo = eleStack.pop();
+
+          // If the user was over that element less than 50msec, not worth it.
+          if(oStepInfo && (step.timeStamp - oStepInfo.step.timeStamp < 200)) {
+            steps.splice(oStepInfo.idx, i - oStepInfo.idx);
+            i = oStepInfo.idx;
+          }
+        }
+      }
+    }
+
+    var selectors = [];
     var state;
     var utme = {
         state: state,
@@ -176,7 +196,7 @@
               }, 2000);
           } else {
               state = utme.state = utme.loadStateFromStorage();
-              if (state.status === "RUNNING") {
+              if (state.status === "PLAYING") {
                   runNextStep(state.runningScenario, state.runningStep);
               } else if (!state.status) {
                   state.status = "LOADED";
@@ -184,8 +204,8 @@
           }
         },
         startRecording: function() {
-            if (state.status != 'STARTED') {
-                state.status = 'STARTED';
+            if (state.status != 'RECORDING') {
+                state.status = 'RECORDING';
                 state.steps = [];
                 utme.reportLog("Recording Started");
             }
@@ -193,7 +213,7 @@
         runScenario: function(name) {
             var toRun = name || prompt('Scenario to run');
             getScenario(toRun, function(scenario) {
-                state.status = "RUNNING";
+                state.status = "PLAYING";
 
                 utme.reportLog("Starting Scenario '" + name + "'", scenario);
 
@@ -216,7 +236,7 @@
             return utme.state.status;
         },
         findSelectors: function (element) {
-            var selectors = $(element).selectorator().generate();
+            var eleSelectors = $(element).selectorator().generate();
             // var classes = element.className && element.className.split(" ");
             // if (classes && classes.length) {
             //     var classSelectorString = "";
@@ -229,14 +249,18 @@
             //     if (classSelectorString) {
             //         var testSel = $(classSelectorString);
             //         if (testSel.length == 1 && testSel[0] == element) {
-            //             selectors.unshift(classSelectorString);
+            //             eleSelectors.unshift(classSelectorString);
             //         }
             //     }
             // }
-            return selectors;
+            selectors.push({
+                element: element,
+                selectors: eleSelectors
+            });
+            return eleSelectors;
         },
         registerEvent: function(eventName, data) {
-            if (state.status == 'STARTED') {
+            if (state.status == 'RECORDING') {
                 state.steps.push({
                     eventName: eventName,
                     timeStamp: new Date().getTime(),
@@ -273,6 +297,9 @@
                 steps: state.steps
             };
             if (newScenario.name) {
+
+                simplifySteps(state.steps);
+
                 state.scenarios.push(newScenario);
 
                 if (saveHandlers && saveHandlers.length) {
@@ -318,7 +345,7 @@
         for (var i = 0; i < events.length; i++) {
             document.addEventListener(events[i], (function(evt) {
                 var handler = function(e) {
-                  if (utme.getStatus() == 'STARTED' && e.target.hasAttribute && !e.target.hasAttribute('data-ignore')) {
+                  if (utme.getStatus() == 'RECORDING' && e.target.hasAttribute && !e.target.hasAttribute('data-ignore')) {
                       if (validating) {
                           e.stopPropagation();
                           e.preventDefault();
@@ -395,7 +422,7 @@
         };
 
         document.addEventListener('keypress', function(e) {
-            if (utme.getStatus() == 'STARTED' && !e.target.hasAttribute('data-ignore')) {
+            if (utme.getStatus() == 'RECORDING' && !e.target.hasAttribute('data-ignore')) {
                  var c = e.which;
 
                 // TODO: Doesn't work with caps lock
@@ -446,17 +473,18 @@
     function initControls() {
         var buttonBar = document.createElement('div');
         buttonBar.className = 'utme-bar';
+        buttonBar.setAttribute('data-ignore', true);
 
         function updateButtonStates() {
             var status = utme.getStatus();
-            updateButton(recordButton, status == 'STARTED' ? 'Stop Recording' : 'Record Scenario', validating || status == 'RUNNING');
-            updateButton(runButton, status == 'RUNNING' ? 'Stop Running' : 'Run Scenario', validating || status == 'STARTED');
-            updateButton(validateButton, validating ? 'Done Validating' : 'Validate', status != 'STARTED');
+            updateButton(recordButton, status == 'RECORDING' ? 'Stop Recording' : 'Record Scenario', validating || status == 'PLAYING');
+            updateButton(runButton, status == 'PLAYING' ? 'Stop Running' : 'Run Scenario', validating || status == 'RECORDING');
+            updateButton(validateButton, validating ? 'Done Validating' : 'Validate', status != 'RECORDING');
         }
 
         var recordButton = createButton('Record Scenario', 'start', function() {
             var oldStatus = utme.getStatus();
-            if (oldStatus == 'STARTED') {
+            if (oldStatus == 'RECORDING') {
                 utme.stopRecording();
             } else {
                 utme.startRecording();
@@ -478,7 +506,7 @@
 
         var validateButton = createButton('Validate', 'verify', function() {
             var status = utme.getStatus();
-            if (status == 'STARTED') {
+            if (status == 'RECORDING') {
                 validating = !validating;
 
                 // // We just finished validating
@@ -513,7 +541,7 @@
             initControls();
             initEventHandlers();
 
-            if (utme.state.status == 'STARTED') {
+            if (utme.state.status == 'RECORDING') {
                 utme.registerEvent("load", {
                     url: window.location
                 });

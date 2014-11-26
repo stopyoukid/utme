@@ -29,10 +29,10 @@ module.exports = function(grunt) {
             ]
         },
         build: {
-            // options: {
-            //     mangle: false,
-            //     beautify: true
-            // },
+            options: {
+                mangle: false,
+                beautify: true
+            },
           files: [
             { src: [
                 'src/js/*.js',
