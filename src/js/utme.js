@@ -43,6 +43,10 @@
     ];
 
     function runStep(scenario, idx) {
+        utme.broadcast('RUNNING_STEP');
+
+        toggleHighlight($('.utme-verify'), false);
+
         var step = scenario.steps[idx];
         var state = utme.state;
         if (step && state.status == 'PLAYING') {
@@ -51,6 +55,12 @@
             utme.saveStateToStorage(state);
             if (step.eventName == 'load') {
                 window.location = step.data.url.href;
+            } else if (step.eventName == 'timeout') {
+              setTimeout(function() {
+                if (state.autoRun) {
+                    runNextStep(scenario, idx);
+                }
+              }, step.data.amount);
             } else {
                 var selectors = step.data.selectors;
                 tryUntilFound(selectors,  function(eles) {
@@ -64,6 +74,7 @@
                     }
 
                     var ele = eles[0];
+                    toggleHighlight($(ele), true);
                     if (events.indexOf(step.eventName) >= 0) {
                         var options = {};
                         if (step.data.button) {
@@ -95,16 +106,20 @@
                         Simulate.keyup(ele, key);
                     }
 
-                    runNextStep(scenario, idx);
+                    if (state.autoRun) {
+                        runNextStep(scenario, idx);
+                    }
                 }, function() {
                     if (step.eventName == 'validate') {
                         utme.reportError('Could not find appropriate element for selectors: ' + JSON.stringify(selectors) + " for event " + step.eventName);
                         utme.stopScenario();
                     } else {
                         utme.reportLog('Could not find appropriate element for selectors: ' + JSON.stringify(selectors) + " for event " + step.eventName);
-                        runNextStep(scenario, idx);
+                        if (state.autoRun) {
+                          runNextStep(scenario, idx);
+                        }
                     }
-                }, 100);
+                }, 500);
             }
         } else {
 
@@ -182,6 +197,7 @@
       }
     }
 
+    var listeners = [];
     var selectors = [];
     var state;
     var utme = {
@@ -191,11 +207,14 @@
           if (scenario) {
               localStorage.clear();
               state = utme.state = utme.loadStateFromStorage();
+              utme.broadcast('INITIALIZED');
               setTimeout(function() {
+                  state.autoRun = true;
                   utme.runScenario(scenario);
               }, 2000);
           } else {
               state = utme.state = utme.loadStateFromStorage();
+              utme.broadcast('INITIALIZED');
               if (state.status === "PLAYING") {
                   runNextStep(state.runningScenario, state.runningStep);
               } else if (!state.status) {
@@ -203,19 +222,30 @@
               }
           }
         },
+        broadcast: function(evt, evtData) {
+            if (listeners && listeners.length) {
+              for (var i = 0; i < listeners.length; i++) {
+                listeners[i](evt, evtData);
+              }
+            }
+        },
         startRecording: function() {
             if (state.status != 'RECORDING') {
                 state.status = 'RECORDING';
                 state.steps = [];
                 utme.reportLog("Recording Started");
+                utme.broadcast('RECORDING_STARTED');
             }
         },
         runScenario: function(name) {
             var toRun = name || prompt('Scenario to run');
+            var autoRun = !name ? prompt('Would you like to step through each step (y|n)?') != 'y' : true;
             getScenario(toRun, function(scenario) {
+                state.autoRun = autoRun == true;
                 state.status = "PLAYING";
 
                 utme.reportLog("Starting Scenario '" + name + "'", scenario);
+                utme.broadcast('PLAYBACK_STARTED');
 
                 runStep(scenario, 0);
             });
@@ -225,6 +255,7 @@
             delete state.runningStep;
             delete state.runningScenario;
             state.status = "LOADED";
+            utme.broadcast('PLAYBACK_STOPPED');
 
             utme.reportLog("Stopping Scenario");
 
@@ -266,6 +297,7 @@
                     timeStamp: new Date().getTime(),
                     data: data
                 });
+                utme.broadcast('EVENT_REGISTERED');
             }
         },
         reportLog: function (log, scenario) {
@@ -281,6 +313,9 @@
                     reportHandlers[i].error(error, scenario, utme);
                 }
             }
+        },
+        registerListener: function (handler) {
+            listeners.push(handler);
         },
         registerSaveHandler: function (handler) {
             saveHandlers.push(handler);
@@ -309,6 +344,8 @@
                 }
             }
             state.status = 'LOADED';
+            
+            utme.broadcast('RECORDING_STOPPED');
 
             utme.reportLog("Recording Stopped", newScenario);
         },
@@ -341,6 +378,10 @@
         }
     };
 
+    function toggleHighlight(ele, value) {
+      $(ele).toggleClass('utme-verify', value);
+    }
+
     function initEventHandlers() {
         for (var i = 0; i < events.length; i++) {
             document.addEventListener(events[i], (function(evt) {
@@ -350,10 +391,10 @@
                           e.stopPropagation();
                           e.preventDefault();
                           if (evt == 'mouseover') {
-                              $(e.target).addClass('utme-verify');
+                              toggleHighlight(e.target, true);
                           }
                           if (evt == 'mouseout') {
-                              $(e.target).removeClass('utme-verify');
+                              toggleHighlight(e.target, false);
                           }
                           if (evt == 'click' || evt == 'mousedown') {
                             utme.registerEvent('validate', {
@@ -480,7 +521,29 @@
             updateButton(recordButton, status == 'RECORDING' ? 'Stop Recording' : 'Record Scenario', validating || status == 'PLAYING');
             updateButton(runButton, status == 'PLAYING' ? 'Stop Running' : 'Run Scenario', validating || status == 'RECORDING');
             updateButton(validateButton, validating ? 'Done Validating' : 'Validate', status != 'RECORDING');
+            updateButton(timeoutButton, 'Add Timeout', status != 'RECORDING');
+            updateButton(pauseButton, utme.state.autoRun ? 'Pause' : "Resume",  status != 'PLAYING');
+            updateButton(stepButton, 'Step', status != 'PLAYING' || utme.state.autoRun);
         }
+
+        utme.registerListener(updateButtonStates);
+
+        var pauseButton = createButton('Pause', 'pause', function () {
+            utme.state.autoRun = !utme.state.autoRun;
+        });
+
+        var stepButton = createButton('Step', 'stepButton', function () {
+            runNextStep(utme.state.runningScenario, utme.state.runningStep);
+        });
+
+        var timeoutButton = createButton('Add Timeout', 'timeout', function() {
+          var oldStatus = utme.getStatus();
+          if (oldStatus == 'RECORDING') {
+            utme.registerEvent('timeout', {
+                amount: parseInt(prompt("How long in ms?"), 10)
+            });
+          }
+        });
 
         var recordButton = createButton('Record Scenario', 'start', function() {
             var oldStatus = utme.getStatus();
@@ -489,8 +552,6 @@
             } else {
                 utme.startRecording();
             }
-
-            updateButtonStates();
         });
 
         var runButton = createButton('Run Scenario', 'run', function() {
@@ -500,19 +561,12 @@
             } else {
                 utme.stopScenario(false);
             }
-
-            updateButtonStates();
         });
 
         var validateButton = createButton('Validate', 'verify', function() {
             var status = utme.getStatus();
             if (status == 'RECORDING') {
                 validating = !validating;
-
-                // // We just finished validating
-                // if (!validating) {
-                //     var sectionName = prompt("Please enter a validation step name:");
-                // }
             }
 
             updateButtonStates();
@@ -521,8 +575,11 @@
         updateButtonStates();
 
         buttonBar.appendChild(recordButton);
-        buttonBar.appendChild(runButton);
+        buttonBar.appendChild(timeoutButton);
         buttonBar.appendChild(validateButton);
+        buttonBar.appendChild(runButton);
+        buttonBar.appendChild(pauseButton);
+        buttonBar.appendChild(stepButton);
 
         document.body.appendChild(buttonBar);
     }
