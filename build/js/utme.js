@@ -209,7 +209,7 @@
                 "validate" == step.eventName ? (utme.reportError("Could not find appropriate element for selectors: " + JSON.stringify(locator.selectors) + " for event " + step.eventName), 
                 utme.stopScenario()) : (utme.reportLog("Could not find appropriate element for selectors: " + JSON.stringify(locator.selectors) + " for event " + step.eventName), 
                 state.autoRun && runNextStep(scenario, idx));
-            }, 500, step.data.text);
+            }, 50, step.data.text);
         }
     }
     function tryUntilFound(locator, callback, fail, timeout, textToCheck) {
@@ -237,7 +237,7 @@
         tryFind(20);
     }
     function runNextStep(scenario, idx) {
-        scenario.steps.length > idx + 1 ? "mousemove" == scenario.steps[idx].eventName || scenario.steps[idx].eventName.indexOf("key") >= 0 || "verify" == scenario.steps[idx].eventName ? runStep(scenario, idx + 1) : (timeout = getTimeout(scenario, idx, idx + 1), 
+        scenario.steps.length > idx + 1 ? "mousemove" == scenario.steps[idx].eventName || scenario.steps[idx].eventName.indexOf("key") >= 0 || "verify" == scenario.steps[idx].eventName ? runStep(scenario, idx + 1) : (timeout = getTimeout(scenario, idx, idx + 1) / 100, 
         setTimeout(function() {
             runStep(scenario, idx + 1);
         }, timeout)) : utme.stopScenario(!0);
@@ -463,7 +463,7 @@
             return utme.state.status;
         },
         createElementLocator: function(element) {
-            var uniqueId = guid();
+            var uniqueId = element.getAttribute("data-unique-id") || guid();
             element.setAttribute("data-unique-id", uniqueId);
             var eleHtml = element.cloneNode().outerHTML, eleSelectors = [];
             if ("BODY" == element.tagName.toUpperCase() || "HTML" == element.tagName.toUpperCase()) var eleSelectors = [ element.tagName ]; else var docHtml = document.body.innerHTML, eleSelectors = [ {

@@ -112,7 +112,7 @@
                           runNextStep(scenario, idx);
                         }
                     }
-                }, 500, step.data.text);
+                }, 50, step.data.text);
             }
         } else {
 
@@ -172,7 +172,7 @@
               runStep(scenario, idx + 1);
             } else {
               // timeout = Math.max(getTimeout(scenario, idx, idx + 1) / 100, 0);
-              timeout = getTimeout(scenario, idx, idx + 1);
+              timeout = getTimeout(scenario, idx, idx + 1) / 100;
               setTimeout(function() {
                 runStep(scenario, idx + 1);
               }, timeout);
@@ -300,7 +300,7 @@
             return utme.state.status;
         },
         createElementLocator: function (element) {
-            var uniqueId = guid();
+            var uniqueId = element.getAttribute("data-unique-id") || guid();
             element.setAttribute("data-unique-id", uniqueId);
 
             var eleHtml = element.cloneNode().outerHTML;
