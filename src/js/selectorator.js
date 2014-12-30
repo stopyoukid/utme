@@ -214,11 +214,17 @@
         this.element = element;
         this.options = extend(extend({}, $.selectorator.options), options);
         this.cachedResults = {};
+
+        var parent = element.parent();
+        if (parent[0] != null && parent[0].nodeType <= 8) {
+          parent = $(parent[0]);
+        }
+        this.topElement = parent;
       }
 
       Selectorator.prototype.query = function(selector) {
         var _base;
-        return (_base = this.cachedResults)[selector] || (_base[selector] = document.querySelectorAll(selector.replace(/#([^\s]+)/g, "[id='$1']")));
+        return (_base = this.cachedResults)[selector] || (_base[selector] = (this.topElement[0] && this.topElement[0].querySelectorAll(selector.replace(/#([^\s]+)/g, "[id='$1']"))) || []);
       };
 
       Selectorator.prototype.getProperTagName = function() {
@@ -269,11 +275,15 @@
 
       Selectorator.prototype.generate = function() {
         var fn, res, _i, _len, _ref;
-        if (!(this.element && this.hasParent() && this.isElement())) {
+        if (!(this.element && this.isElement())) {
           return [''];
         }
         res = [];
-        _ref = [this.generateSimple, this.generateAncestor, this.generateRecursive];
+        _ref = [this.generateSimple];
+        if (this.hasParent()) {
+            _ref.push(this.generateAncestor);
+            _ref.push(this.generateRecursive);
+        }
         for (_i = 0, _len = _ref.length; _i < _len; _i++) {
           fn = _ref[_i];
           res = unique(clean(fn.call(this)));
@@ -354,7 +364,7 @@
         }
 
         parent = this.element.parent();
-        if (parent[0] != document) {
+        if (parent[0] != null && parent[0].nodeType <= 8) {
             parentSelector = new Selectorator(parent).generateRecursiveSimple()[0];
         }
 

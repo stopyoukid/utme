@@ -7,16 +7,16 @@
     var loadHandlers = [];
 
     function getScenario(name, callback) {
-        // if (loadHandlers.length > 0) {
-        //     loadHandlers[0](name, callback);
-        // } else {
-            var state = utme.state;
-            for (var i = 0; i < state.scenarios.length; i++) {
-                if (state.scenarios[i].name == name) {
-                    callback(state.scenarios[i]);
-                }
+        if (loadHandlers.length == 0) {
+          var state = utme.state;
+          for (var i = 0; i < state.scenarios.length; i++) {
+            if (state.scenarios[i].name == name) {
+              callback(state.scenarios[i]);
             }
-        // }
+          }
+        } else {
+          loadHandlers[0](name, callback);
+        }
     }
     var validating = false;
 
@@ -38,6 +38,7 @@
       'mouseout',
       'mouseover',
       'mouseup',
+      'change',
       // 'resize',
       // 'scroll'
     ];
@@ -45,7 +46,7 @@
     function runStep(scenario, idx) {
         utme.broadcast('RUNNING_STEP');
 
-        toggleHighlight($('.utme-verify'), false);
+        // toggleHighlight($('.utme-verify'), false);
 
         var step = scenario.steps[idx];
         var state = utme.state;
@@ -62,19 +63,11 @@
                 }
               }, step.data.amount);
             } else {
-                var selectors = step.data.selectors;
-                tryUntilFound(selectors,  function(eles) {
-                    if (step.eventName === 'validate') {
-                        var newText = $(eles[0]).text();
-                        if (newText != step.data.text) {
-                            utme.stopScenario();
-                            utme.reportError("Expected: " + step.data.text + ", but was: " + newText);
-                            return;
-                        }
-                    }
+                var locator = step.data.locator;
+                tryUntilFound(locator,  function(eles) {
 
                     var ele = eles[0];
-                    toggleHighlight($(ele), true);
+                    // toggleHighlight($(ele), true);
                     if (events.indexOf(step.eventName) >= 0) {
                         var options = {};
                         if (step.data.button) {
@@ -89,7 +82,7 @@
                             Simulate[step.eventName](ele, options);
                         }
 
-                        if (typeof ele.value != "undefined" || typeof step.data.value != "undefined") {
+                        if (typeof step.data.value != "undefined") {
                             ele.value = step.data.value;
                             Simulate.event(ele, 'change');
                         }
@@ -111,32 +104,46 @@
                     }
                 }, function() {
                     if (step.eventName == 'validate') {
-                        utme.reportError('Could not find appropriate element for selectors: ' + JSON.stringify(selectors) + " for event " + step.eventName);
+                        utme.reportError('Could not find appropriate element for selectors: ' + JSON.stringify(locator.selectors) + " for event " + step.eventName);
                         utme.stopScenario();
                     } else {
-                        utme.reportLog('Could not find appropriate element for selectors: ' + JSON.stringify(selectors) + " for event " + step.eventName);
+                        utme.reportLog('Could not find appropriate element for selectors: ' + JSON.stringify(locator.selectors) + " for event " + step.eventName);
                         if (state.autoRun) {
                           runNextStep(scenario, idx);
                         }
                     }
-                }, 500);
+                }, 500, step.data.text);
             }
         } else {
 
         }
     }
 
-    function tryUntilFound(selectors, callback, fail, timeout) {
+    function tryUntilFound(locator, callback, fail, timeout, textToCheck) {
         var started = new Date().getTime();
 
-        function tryFind() {
+        function tryFind(delay) {
             var eles;
             var foundTooMany = false;
             var foundValid = false;
-            for (var i = 0; i < selectors.length; i++) {
-                eles = $(selectors[i] + ":visible");
+            var uniqueId = locator.uniqueId;
+            var selectorsToTest = locator.selectors.slice(0);
+            if (uniqueId) {
+                selectorsToTest.unshift('[data-unique-id=\'' + uniqueId + '\']');
+            }
+            for (var i = 0; i < selectorsToTest.length; i++) {
+                eles = $(selectorsToTest[i] + ":visible");
                 if (eles.length == 1) {
-                    foundValid = true;
+                    if (typeof textToCheck != 'undefined'){
+                        var newText = $(eles[0]).text();
+                        if (newText == textToCheck) {
+                            foundValid = true;
+                            break;
+                        }
+                    } else {
+                      foundValid = true;
+                      break;
+                    }
                     break;
                 } else if (eles.length > 1) {
                     foundTooMany = true;
@@ -144,16 +151,17 @@
             }
 
             if (foundValid) {
+                eles.attr('data-unique-id', uniqueId);
                 callback(eles);
             }
             else if (new Date().getTime() - started < timeout) {
-                setTimeout(tryFind, 20);
+                setTimeout(tryFind, delay);
             } else {
                 fail();
             }
         }
 
-        tryFind();
+        tryFind(20);
     }
 
     function runNextStep(scenario, idx) {
@@ -163,11 +171,11 @@
                 scenario.steps[idx].eventName == 'verify') {
               runStep(scenario, idx + 1);
             } else {
-              // timeout = Math.max(getTimeout(scenario, idx, idx + 1) / 100, 100);
-
+              // timeout = Math.max(getTimeout(scenario, idx, idx + 1) / 100, 0);
+              timeout = getTimeout(scenario, idx, idx + 1);
               setTimeout(function() {
                 runStep(scenario, idx + 1);
-              }, 10);
+              }, timeout);
             }
         } else {
             utme.stopScenario(true);
@@ -178,27 +186,52 @@
         return scenario.steps[secondIndex].timeStamp - scenario.steps[firstIndex].timeStamp;
     }
 
+    function fragmentFromString(strHTML) {
+      var temp = document.createElement('template');
+      temp.innerHTML = strHTML;
+      return temp.content;
+    }
+
     function simplifySteps(steps) {
       var eleStack = [];
       // Scrub short events
       for (var i = 0; i < steps.length; i++) {
         var step = steps[i];
+        var locator = step && step.data.locator;
+        var selector = locator.selectors[0];
+        if (selector && selector.doc) {
+            var frag = fragmentFromString(selector.doc);
+            var ele = frag.querySelectorAll('[data-unique-id=\'' + selector.id + '\']');
+            // var selectors = $(ele).selectorator().generate();
+            locator.selectors = [unique(ele[0])];
+        }
+
         if (step.eventName == 'mouseenter') {
           eleStack.push({ idx: i, step: step });
         } else if (step.eventName == 'mouseleave') {
-          var oStepInfo = eleStack.pop();
-
-          // If the user was over that element less than 50msec, not worth it.
-          if(oStepInfo && (step.timeStamp - oStepInfo.step.timeStamp < 200)) {
-            steps.splice(oStepInfo.idx, i - oStepInfo.idx);
-            i = oStepInfo.idx;
-          }
+          // var oStepInfo = eleStack.pop();
+          // // If the user was over that element less than 50msec, not worth it.
+          // if(oStepInfo && (step.timeStamp - oStepInfo.step.timeStamp < 50)) {
+          //   steps.splice(oStepInfo.idx, i - oStepInfo.idx);
+          //   i = oStepInfo.idx;
+          // }
         }
       }
     }
 
+    var guid = (function() {
+      function s4() {
+        return Math.floor((1 + Math.random()) * 0x10000)
+        .toString(16)
+        .substring(1);
+      }
+      return function() {
+        return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
+        s4() + '-' + s4() + s4() + s4();
+      };
+    })();
+
     var listeners = [];
-    var selectors = [];
     var state;
     var utme = {
         state: state,
@@ -266,8 +299,27 @@
         getStatus: function() {
             return utme.state.status;
         },
-        findSelectors: function (element) {
-            var eleSelectors = $(element).selectorator().generate();
+        createElementLocator: function (element) {
+            var uniqueId = guid();
+            element.setAttribute("data-unique-id", uniqueId);
+
+            var eleHtml = element.cloneNode().outerHTML;
+            // var endTagIndex = eleHtml.indexOf("</");
+            // if (endTagIndex > 0) {
+            //     eleHtml = eleHtml.substring(0, endTagIndex);
+            // }
+            var eleSelectors = [];
+            if (element.tagName.toUpperCase() == 'BODY' || element.tagName.toUpperCase() == 'HTML') {
+              var eleSelectors = [element.tagName];
+            } else {
+                var docHtml = document.body.innerHTML;
+                var eleSelectors = [{
+                  doc: docHtml,//docHtml.substring(0, docHtml.indexOf(eleHtml) + eleHtml.length),
+                  id: uniqueId,
+                  ele: eleHtml
+                }];
+            }
+            // var eleSelectors = $(element).selectorator().generate();
             // var classes = element.className && element.className.split(" ");
             // if (classes && classes.length) {
             //     var classSelectorString = "";
@@ -284,11 +336,10 @@
             //         }
             //     }
             // }
-            selectors.push({
-                element: element,
+            return {
+                uniqueId: uniqueId,
                 selectors: eleSelectors
-            });
-            return eleSelectors;
+            };
         },
         registerEvent: function(eventName, data) {
             if (state.status == 'RECORDING') {
@@ -344,7 +395,7 @@
                 }
             }
             state.status = 'LOADED';
-            
+
             utme.broadcast('RECORDING_STOPPED');
 
             utme.reportLog("Recording Stopped", newScenario);
@@ -398,19 +449,22 @@
                           }
                           if (evt == 'click' || evt == 'mousedown') {
                             utme.registerEvent('validate', {
-                                selectors: utme.findSelectors(e.target),
+                                locator: utme.createElementLocator(e.target),
                                 text: $(e.target).text()
                             });
                           }
                           return false;
                       } else {
                           var args =  {
-                              selectors: utme.findSelectors(e.target),
-                              value: e.target.value
+                              locator: utme.createElementLocator(e.target)
                           };
 
                           if (e.which || e.button) {
                               args.button = e.which || e.button;
+                          }
+
+                          if (evt == 'change') {
+                            args.value = e.target.value;
                           }
 
                           utme.registerEvent(evt, args);
@@ -482,7 +536,7 @@
                 }
 
                 utme.registerEvent('keypress', {
-                    selectors: utme.findSelectors(e.target),
+                    locator: utme.createElementLocator(e.target),
                     key: c,
                     prevValue: e.target.value,
                     value: e.target.value + c,
@@ -532,8 +586,9 @@
             utme.state.autoRun = !utme.state.autoRun;
         });
 
-        var stepButton = createButton('Step', 'stepButton', function () {
+        var stepButton = createButton('Step', 'stepButton', function (e) {
             runNextStep(utme.state.runningScenario, utme.state.runningStep);
+            return false;
         });
 
         var timeoutButton = createButton('Add Timeout', 'timeout', function() {
@@ -615,5 +670,137 @@
         utme.reportLog("Script Error: " + err.message + ":" + err.url + "," + err.line + ":" + err.col);
     });
     global.utme = utme;
+
+    /**
+    * Generate unique CSS selector for given DOM element
+    *
+    * @param {Element} el
+    * @return {String}
+    * @api private
+    */
+
+    function unique(el) {
+      if (!el || !el.tagName) {
+        throw new TypeError('Element expected');
+      }
+
+      var selectors  = getSelectors(el);
+      var topElement = el;
+      while (topElement.parentElement != null) {
+          topElement = topElement.parentElement;
+      }
+
+      function mkSelectorString(selectors) {
+        return selectors.map(function (sel) {
+          return sel.selector;
+        }).join(" > ");
+      }
+
+      function isUnique(selectors) {
+        return topElement.querySelectorAll(mkSelectorString(selectors)).length == 1;
+      }
+
+      if (!isUnique(selectors)) {
+        for (var i = selectors.length - 1; i >= 0; i--) {
+          var childIndex = [].indexOf.call(selectors[i].element.parentNode.children, selectors[i].element);
+
+          selectors[i].selector = selectors[i].selector + ':nth-child(' + (childIndex + 1) + ')';
+
+          if (isUnique(selectors)) {
+            break;
+          }
+        }
+      }
+
+      return mkSelectorString(selectors);
+    };
+
+    /**
+    * Get class names for an element
+    *
+    * @pararm {Element} el
+    * @return {Array}
+    */
+
+    function getClassNames(el) {
+      var className = el.getAttribute('class');
+      className = className && className.replace('utme-verify', '');
+
+      if (!className || (!className.trim().length)) { return []; }
+
+      // remove duplicate whitespace
+      className = className.replace(/\s+/g, ' ');
+
+      // trim leading and trailing whitespace
+      className = className.replace(/^\s+|\s+$/g, '');
+
+      // split into separate classnames
+      return className.trim().split(' ');
+    }
+
+    /**
+    * CSS selectors to generate unique selector for DOM element
+    *
+    * @param {Element} el
+    * @return {Array}
+    * @api prviate
+    */
+
+    function getSelectors(el) {
+      var parts = [];
+      var label = null;
+      var title = null;
+      var alt   = null;
+      var name  = null;
+      var value = null;
+      var me = el;
+
+      do {
+        var uniqueId = el != me && el.getAttribute("data-unique-id");
+
+        // IDs are unique enough
+        if (uniqueId) {
+          label = '[data-unique-id=\'' + uniqueId + '\']';
+        } else if (el.id) {
+          label = '#' + el.id;
+        } else {
+          // Otherwise, use tag name
+          label     = el.tagName.toLowerCase();
+
+          var classNames = getClassNames(el);
+
+          // Tag names could use classes for specificity
+          if (classNames.length) {
+            label += '.' + classNames.join('.');
+          }
+        }
+
+        // Titles & Alt attributes are very useful for specificity and tracking
+        if (title = el.getAttribute('title')) {
+          label += '[title="' + title + '"]';
+        } else if (alt = el.getAttribute('alt')) {
+          label += '[alt="' + alt + '"]';
+        } else if (name = el.getAttribute('name')) {
+          label += '[name="' + name + '"]';
+        }
+
+        if (value = el.getAttribute('value')) {
+          label += '[value="' + value + '"]';
+        }
+
+        parts.unshift({
+          element: el,
+          selector: label
+        });
+      } while (!el.id && !uniqueId && (el = el.parentNode) && el.tagName);
+
+      // Some selectors should have matched at least
+      if (!parts.length) {
+        throw new Error('Failed to identify CSS selector');
+      }
+
+
+      return parts;
+    }
 
 })(this, Simulate);

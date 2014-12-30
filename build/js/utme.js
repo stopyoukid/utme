@@ -17,10 +17,12 @@
             function Selectorator(element, options) {
                 this.element = element, this.options = extend(extend({}, $.selectorator.options), options), 
                 this.cachedResults = {};
+                var parent = element.parent();
+                null != parent[0] && parent[0].nodeType <= 8 && (parent = $(parent[0])), this.topElement = parent;
             }
             return Selectorator.prototype.query = function(selector) {
                 var _base;
-                return (_base = this.cachedResults)[selector] || (_base[selector] = document.querySelectorAll(selector.replace(/#([^\s]+)/g, "[id='$1']")));
+                return (_base = this.cachedResults)[selector] || (_base[selector] = this.topElement[0] && this.topElement[0].querySelectorAll(selector.replace(/#([^\s]+)/g, "[id='$1']")) || []);
             }, Selectorator.prototype.getProperTagName = function() {
                 return this.element[0] ? this.element[0].tagName.toLowerCase() : null;
             }, Selectorator.prototype.hasParent = function() {
@@ -39,10 +41,10 @@
                 return contains(this.element[0], element) ? selector : null;
             }, Selectorator.prototype.generate = function() {
                 var fn, res, _i, _len, _ref;
-                if (!(this.element && this.hasParent() && this.isElement())) return [ "" ];
-                for (res = [], _ref = [ this.generateSimple, this.generateAncestor, this.generateRecursive ], 
-                _i = 0, _len = _ref.length; _len > _i; _i++) if (fn = _ref[_i], res = unique(clean(fn.call(this))), 
-                res && res.length > 0) return res;
+                if (!this.element || !this.isElement()) return [ "" ];
+                for (res = [], _ref = [ this.generateSimple ], this.hasParent() && (_ref.push(this.generateAncestor), 
+                _ref.push(this.generateRecursive)), _i = 0, _len = _ref.length; _len > _i; _i++) if (fn = _ref[_i], 
+                res = unique(clean(fn.call(this))), res && res.length > 0) return res;
                 return unique(res);
             }, Selectorator.prototype.generateAncestor = function() {
                 var isFirst, parent, parentSelector, parentSelectors, results, selector, selectors, _i, _j, _k, _len, _len1, _len2, _ref;
@@ -73,7 +75,7 @@
             }, Selectorator.prototype.generateRecursiveSimple = function() {
                 var index, parent, parentSelector, selector;
                 return selector = this.getProperTagName(), -1 !== selector.indexOf(":") && (selector = "*"), 
-                parent = this.element.parent(), parent[0] != document && (parentSelector = new Selectorator(parent).generateRecursiveSimple()[0]), 
+                parent = this.element.parent(), null != parent[0] && parent[0].nodeType <= 8 && (parentSelector = new Selectorator(parent).generateRecursiveSimple()[0]), 
                 index = parent.children(selector).index(this.element), selector = "" + selector + ":eq(" + index + ")", 
                 "" !== parentSelector && (selector = (parentSelector ? parentSelector + " > " : "") + selector), 
                 [ selector ];
@@ -180,27 +182,22 @@
     });
 }(), function(global, Simulate) {
     function getScenario(name, callback) {
-        for (var state = utme.state, i = 0; i < state.scenarios.length; i++) state.scenarios[i].name == name && callback(state.scenarios[i]);
+        if (0 == loadHandlers.length) for (var state = utme.state, i = 0; i < state.scenarios.length; i++) state.scenarios[i].name == name && callback(state.scenarios[i]); else loadHandlers[0](name, callback);
     }
     function runStep(scenario, idx) {
-        utme.broadcast("RUNNING_STEP"), toggleHighlight($(".utme-verify"), !1);
+        utme.broadcast("RUNNING_STEP");
         var step = scenario.steps[idx], state = utme.state;
         if (step && "PLAYING" == state.status) if (state.runningScenario = scenario, state.runningStep = idx, 
         utme.saveStateToStorage(state), "load" == step.eventName) window.location = step.data.url.href; else if ("timeout" == step.eventName) setTimeout(function() {
             state.autoRun && runNextStep(scenario, idx);
         }, step.data.amount); else {
-            var selectors = step.data.selectors;
-            tryUntilFound(selectors, function(eles) {
-                if ("validate" === step.eventName) {
-                    var newText = $(eles[0]).text();
-                    if (newText != step.data.text) return utme.stopScenario(), void utme.reportError("Expected: " + step.data.text + ", but was: " + newText);
-                }
+            var locator = step.data.locator;
+            tryUntilFound(locator, function(eles) {
                 var ele = eles[0];
-                if (toggleHighlight($(ele), !0), events.indexOf(step.eventName) >= 0) {
+                if (events.indexOf(step.eventName) >= 0) {
                     var options = {};
                     step.data.button && (options.which = options.button = step.data.button), "click" == step.eventName ? $(ele).trigger("click") : "focus" != step.eventName && "blur" != step.eventName || !ele[step.eventName] ? Simulate[step.eventName](ele, options) : ele[step.eventName](), 
-                    ("undefined" != typeof ele.value || "undefined" != typeof step.data.value) && (ele.value = step.data.value, 
-                    Simulate.event(ele, "change"));
+                    "undefined" != typeof step.data.value && (ele.value = step.data.value, Simulate.event(ele, "change"));
                 }
                 if ("keypress" == step.eventName) {
                     var key = String.fromCharCode(step.data.keyCode);
@@ -209,42 +206,60 @@
                 }
                 state.autoRun && runNextStep(scenario, idx);
             }, function() {
-                "validate" == step.eventName ? (utme.reportError("Could not find appropriate element for selectors: " + JSON.stringify(selectors) + " for event " + step.eventName), 
-                utme.stopScenario()) : (utme.reportLog("Could not find appropriate element for selectors: " + JSON.stringify(selectors) + " for event " + step.eventName), 
+                "validate" == step.eventName ? (utme.reportError("Could not find appropriate element for selectors: " + JSON.stringify(locator.selectors) + " for event " + step.eventName), 
+                utme.stopScenario()) : (utme.reportLog("Could not find appropriate element for selectors: " + JSON.stringify(locator.selectors) + " for event " + step.eventName), 
                 state.autoRun && runNextStep(scenario, idx));
-            }, 500);
+            }, 500, step.data.text);
         }
     }
-    function tryUntilFound(selectors, callback, fail, timeout) {
-        function tryFind() {
-            for (var eles, foundTooMany = !1, foundValid = !1, i = 0; i < selectors.length; i++) {
-                if (eles = $(selectors[i] + ":visible"), 1 == eles.length) {
-                    foundValid = !0;
+    function tryUntilFound(locator, callback, fail, timeout, textToCheck) {
+        function tryFind(delay) {
+            var eles, foundTooMany = !1, foundValid = !1, uniqueId = locator.uniqueId, selectorsToTest = locator.selectors.slice(0);
+            uniqueId && selectorsToTest.unshift("[data-unique-id='" + uniqueId + "']");
+            for (var i = 0; i < selectorsToTest.length; i++) {
+                if (eles = $(selectorsToTest[i] + ":visible"), 1 == eles.length) {
+                    if ("undefined" == typeof textToCheck) {
+                        foundValid = !0;
+                        break;
+                    }
+                    var newText = $(eles[0]).text();
+                    if (newText == textToCheck) {
+                        foundValid = !0;
+                        break;
+                    }
                     break;
                 }
                 eles.length > 1 && (foundTooMany = !0);
             }
-            foundValid ? callback(eles) : new Date().getTime() - started < timeout ? setTimeout(tryFind, 20) : fail();
+            foundValid ? (eles.attr("data-unique-id", uniqueId), callback(eles)) : new Date().getTime() - started < timeout ? setTimeout(tryFind, delay) : fail();
         }
         var started = new Date().getTime();
-        tryFind();
+        tryFind(20);
     }
     function runNextStep(scenario, idx) {
-        scenario.steps.length > idx + 1 ? "mousemove" == scenario.steps[idx].eventName || scenario.steps[idx].eventName.indexOf("key") >= 0 || "verify" == scenario.steps[idx].eventName ? runStep(scenario, idx + 1) : setTimeout(function() {
+        scenario.steps.length > idx + 1 ? "mousemove" == scenario.steps[idx].eventName || scenario.steps[idx].eventName.indexOf("key") >= 0 || "verify" == scenario.steps[idx].eventName ? runStep(scenario, idx + 1) : (timeout = getTimeout(scenario, idx, idx + 1), 
+        setTimeout(function() {
             runStep(scenario, idx + 1);
-        }, 10) : utme.stopScenario(!0);
+        }, timeout)) : utme.stopScenario(!0);
+    }
+    function getTimeout(scenario, firstIndex, secondIndex) {
+        return scenario.steps[secondIndex].timeStamp - scenario.steps[firstIndex].timeStamp;
+    }
+    function fragmentFromString(strHTML) {
+        var temp = document.createElement("template");
+        return temp.innerHTML = strHTML, temp.content;
     }
     function simplifySteps(steps) {
         for (var eleStack = [], i = 0; i < steps.length; i++) {
-            var step = steps[i];
-            if ("mouseenter" == step.eventName) eleStack.push({
+            var step = steps[i], locator = step && step.data.locator, selector = locator.selectors[0];
+            if (selector && selector.doc) {
+                var frag = fragmentFromString(selector.doc), ele = frag.querySelectorAll("[data-unique-id='" + selector.id + "']");
+                locator.selectors = [ unique(ele[0]) ];
+            }
+            "mouseenter" == step.eventName ? eleStack.push({
                 idx: i,
                 step: step
-            }); else if ("mouseleave" == step.eventName) {
-                var oStepInfo = eleStack.pop();
-                oStepInfo && step.timeStamp - oStepInfo.step.timeStamp < 200 && (steps.splice(oStepInfo.idx, i - oStepInfo.idx), 
-                i = oStepInfo.idx);
-            }
+            }) : "mouseleave" == step.eventName;
         }
     }
     function toggleHighlight(ele, value) {
@@ -256,14 +271,14 @@
                 if ("RECORDING" == utme.getStatus() && e.target.hasAttribute && !e.target.hasAttribute("data-ignore")) {
                     if (validating) return e.stopPropagation(), e.preventDefault(), "mouseover" == evt && toggleHighlight(e.target, !0), 
                     "mouseout" == evt && toggleHighlight(e.target, !1), ("click" == evt || "mousedown" == evt) && utme.registerEvent("validate", {
-                        selectors: utme.findSelectors(e.target),
+                        locator: utme.createElementLocator(e.target),
                         text: $(e.target).text()
                     }), !1;
                     var args = {
-                        selectors: utme.findSelectors(e.target),
-                        value: e.target.value
+                        locator: utme.createElementLocator(e.target)
                     };
-                    (e.which || e.button) && (args.button = e.which || e.button), utme.registerEvent(evt, args);
+                    (e.which || e.button) && (args.button = e.which || e.button), "change" == evt && (args.value = e.target.value), 
+                    utme.registerEvent(evt, args);
                 }
             };
             return handler;
@@ -310,7 +325,7 @@
                 var c = e.which;
                 _to_ascii.hasOwnProperty(c) && (c = _to_ascii[c]), c = !e.shiftKey && c >= 65 && 90 >= c ? String.fromCharCode(c + 32) : e.shiftKey && shiftUps.hasOwnProperty(c) ? shiftUps[c] : String.fromCharCode(c), 
                 utme.registerEvent("keypress", {
-                    selectors: utme.findSelectors(e.target),
+                    locator: utme.createElementLocator(e.target),
                     key: c,
                     prevValue: e.target.value,
                     value: e.target.value + c,
@@ -342,7 +357,7 @@
         var pauseButton = createButton("Pause", "pause", function() {
             utme.state.autoRun = !utme.state.autoRun;
         }), stepButton = createButton("Step", "stepButton", function() {
-            runNextStep(utme.state.runningScenario, utme.state.runningStep);
+            return runNextStep(utme.state.runningScenario, utme.state.runningStep), !1;
         }), timeoutButton = createButton("Add Timeout", "timeout", function() {
             var oldStatus = utme.getStatus();
             "RECORDING" == oldStatus && utme.registerEvent("timeout", {
@@ -367,7 +382,55 @@
         var regex = new RegExp("[\\?&]" + name + "=([^&#]*)"), results = regex.exec(location.search);
         return null === results ? "" : decodeURIComponent(results[1].replace(/\+/g, " "));
     }
-    var state, saveHandlers = [], reportHandlers = [], loadHandlers = [], validating = !1, events = [ "click", "focus", "blur", "dblclick", "mousedown", "mouseenter", "mouseleave", "mouseout", "mouseover", "mouseup" ], listeners = [], selectors = [], utme = {
+    function unique(el) {
+        function mkSelectorString(selectors) {
+            return selectors.map(function(sel) {
+                return sel.selector;
+            }).join(" > ");
+        }
+        function isUnique(selectors) {
+            return 1 == topElement.querySelectorAll(mkSelectorString(selectors)).length;
+        }
+        if (!el || !el.tagName) throw new TypeError("Element expected");
+        for (var selectors = getSelectors(el), topElement = el; null != topElement.parentElement; ) topElement = topElement.parentElement;
+        if (!isUnique(selectors)) for (var i = selectors.length - 1; i >= 0; i--) {
+            var childIndex = [].indexOf.call(selectors[i].element.parentNode.children, selectors[i].element);
+            if (selectors[i].selector = selectors[i].selector + ":nth-child(" + (childIndex + 1) + ")", 
+            isUnique(selectors)) break;
+        }
+        return mkSelectorString(selectors);
+    }
+    function getClassNames(el) {
+        var className = el.getAttribute("class");
+        return className = className && className.replace("utme-verify", ""), className && className.trim().length ? (className = className.replace(/\s+/g, " "), 
+        className = className.replace(/^\s+|\s+$/g, ""), className.trim().split(" ")) : [];
+    }
+    function getSelectors(el) {
+        var parts = [], label = null, title = null, alt = null, name = null, value = null, me = el;
+        do {
+            var uniqueId = el != me && el.getAttribute("data-unique-id");
+            if (uniqueId) label = "[data-unique-id='" + uniqueId + "']"; else if (el.id) label = "#" + el.id; else {
+                label = el.tagName.toLowerCase();
+                var classNames = getClassNames(el);
+                classNames.length && (label += "." + classNames.join("."));
+            }
+            (title = el.getAttribute("title")) ? label += '[title="' + title + '"]' : (alt = el.getAttribute("alt")) ? label += '[alt="' + alt + '"]' : (name = el.getAttribute("name")) && (label += '[name="' + name + '"]'), 
+            (value = el.getAttribute("value")) && (label += '[value="' + value + '"]'), parts.unshift({
+                element: el,
+                selector: label
+            });
+        } while (!el.id && !uniqueId && (el = el.parentNode) && el.tagName);
+        if (!parts.length) throw new Error("Failed to identify CSS selector");
+        return parts;
+    }
+    var state, saveHandlers = [], reportHandlers = [], loadHandlers = [], validating = !1, events = [ "click", "focus", "blur", "dblclick", "mousedown", "mouseenter", "mouseleave", "mouseout", "mouseover", "mouseup", "change" ], guid = function() {
+        function s4() {
+            return Math.floor(65536 * (1 + Math.random())).toString(16).substring(1);
+        }
+        return function() {
+            return s4() + s4() + "-" + s4() + "-" + s4() + "-" + s4() + "-" + s4() + s4() + s4();
+        };
+    }(), listeners = [], utme = {
         state: state,
         init: function() {
             var scenario = getParameterByName("utme_scenario");
@@ -399,12 +462,19 @@
         getStatus: function() {
             return utme.state.status;
         },
-        findSelectors: function(element) {
-            var eleSelectors = $(element).selectorator().generate();
-            return selectors.push({
-                element: element,
+        createElementLocator: function(element) {
+            var uniqueId = guid();
+            element.setAttribute("data-unique-id", uniqueId);
+            var eleHtml = element.cloneNode().outerHTML, eleSelectors = [];
+            if ("BODY" == element.tagName.toUpperCase() || "HTML" == element.tagName.toUpperCase()) var eleSelectors = [ element.tagName ]; else var docHtml = document.body.innerHTML, eleSelectors = [ {
+                doc: docHtml,
+                id: uniqueId,
+                ele: eleHtml
+            } ];
+            return {
+                uniqueId: uniqueId,
                 selectors: eleSelectors
-            }), eleSelectors;
+            };
         },
         registerEvent: function(eventName, data) {
             "RECORDING" == state.status && (state.steps.push({
