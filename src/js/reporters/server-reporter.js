@@ -1,6 +1,6 @@
 (function(utme, global) {
     var serverReporter = {
-        baseUrl: getParameterByName("utme_test_server") || "http://0.0.0.0:9043/",
+        baseUrl: getParameterByName("utme_test_server") || "http://192.168.200.136:9043/",
         error: function (error, scenario, utme) {
             $.ajax({
               type: "POST",
@@ -23,6 +23,10 @@
         loadScenario: function (name, callback) {
             $.ajax({
                 jsonp: "callback",
+
+                contentType: "application/json; charset=utf-8",
+
+                crossDomain: true,
 
                 url:  serverReporter.baseUrl + "scenario/" + name,
 

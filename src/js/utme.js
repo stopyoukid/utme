@@ -158,8 +158,8 @@
             }
         }
         //
-        setTimeout(tryFind, timeout);
-        // tryFind();
+        // setTimeout(tryFind, timeout);
+        tryFind();
         // tryFind();
     }
 
@@ -215,16 +215,20 @@
         var step = steps[i];
         var uniqueId = getUniqueIdFromStep(step);
         if (step.eventName == 'mouseenter' && uniqueId) {
-          var hasValid = false;
           var remove = false;
           for (var j = steps.length -1; j >= i; j--) {
             var otherStep = steps[j];
             var otherUniqueId = getUniqueIdFromStep(otherStep);
             if (uniqueId === otherUniqueId) {
               if (otherStep.eventName === 'mouseleave') {
-                remove =  (otherStep.timeStamp - step.timeStamp) < 1000;
+                var diff =  (otherStep.timeStamp - step.timeStamp);
+                remove = diff < 1000;
               }
               if (remove) {
+                var diff = steps[j].timeStamp - steps[j - 1].timeStamp;
+                for (var k = j; k < steps.length - 1; k++) {
+                  steps[k].timeStamp -= diff;
+                }
                 steps.splice(j, 1);
               }
             }
@@ -840,7 +844,7 @@
 
         // IDs are unique enough
         if (el.id) {
-          label = '#' + el.id;
+          label = '[id=\'' + el.id + "\']";
         } else {
           // Otherwise, use tag name
           label     = el.tagName.toLowerCase();
