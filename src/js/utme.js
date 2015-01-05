@@ -216,19 +216,16 @@
         var uniqueId = getUniqueIdFromStep(step);
         if (step.eventName == 'mouseenter' && uniqueId) {
           var hasValid = false;
-          for (var j = i; j < steps.length; j++) {
+          var remove = false;
+          for (var j = steps.length -1; j >= i; j--) {
             var otherStep = steps[j];
             var otherUniqueId = getUniqueIdFromStep(otherStep);
             if (uniqueId === otherUniqueId) {
               if (otherStep.eventName === 'mouseleave') {
-                if ( (otherStep.timeStamp - step.timeStamp) < 100) {
-                  steps.splice(i, 1);
-                  steps.splice(j, 1);
-                  i--;
-                }
-                break;
-              } else if (otherStep.eventName.indexOf("mouse") != 0) {
-                break;
+                remove =  (otherStep.timeStamp - step.timeStamp) < 1000;
+              }
+              if (remove) {
+                steps.splice(j, 1);
               }
             }
           }
@@ -293,7 +290,7 @@
             getScenario(toRun, function(scenario) {
                 scenario = JSON.parse(JSON.stringify(scenario));
 
-                // simplifySteps(scenario.steps);
+                simplifySteps(scenario.steps);
 
                 state.autoRun = autoRun == true;
                 state.status = "PLAYING";
@@ -436,6 +433,11 @@
       $(ele).toggleClass('utme-verify', value);
     }
 
+    function toggleReady(ele, value) {
+      $(ele).toggleClass('utme-ready', value);
+    }
+
+    var timers = [];
     function initEventHandlers() {
         // function nodeInserted(event) {
         //   var ele = $(event.target);
@@ -501,9 +503,32 @@
                           var args =  {
                               locator: utme.createElementLocator(e.target)
                           };
+                          var timer;
 
                           if (e.which || e.button) {
                               args.button = e.which || e.button;
+                          }
+
+                          if (evt == 'mouseover') {
+                            toggleHighlight(e.target, true);
+                            timers.push({
+                              element: e.target,
+                              timer: setTimeout(function() {
+                                toggleReady(e.target, true);
+                                toggleHighlight(e.target, false);
+                              }, 1000)
+                            });
+                          }
+                          if (evt == 'mouseout') {
+                            for (var i = 0; i < timers.length; i++) {
+                                if (timers[i].element == e.target) {
+                                    clearTimeout(timers[i].timer);
+                                    timers.splice(i, 1);
+                                    break;
+                                }
+                            }
+                            toggleHighlight(e.target, false);
+                            toggleReady(e.target, false);
                           }
 
                           if (evt == 'change') {
@@ -780,6 +805,7 @@
     function getClassNames(el) {
       var className = el.getAttribute('class');
       className = className && className.replace('utme-verify', '');
+      className = className && className.replace('utme-ready', '');
 
       if (!className || (!className.trim().length)) { return []; }
 
