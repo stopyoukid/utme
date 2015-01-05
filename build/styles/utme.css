@@ -117,3 +117,11 @@
 .utme-verify {
     background-color: lightblue !important;
 }
+
+.utme-ready {
+  background-color: lightgreen !important;
+}
+
+.utme-verify.utme-ready {
+  background-color: lightgreen !important;
+}

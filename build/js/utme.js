@@ -693,10 +693,36 @@ if (typeof module !== 'undefined'){
         }
     }
 
+    function waitForAngular(rootSelector, callback) {
+      var el = document.querySelector(rootSelector);
+
+      try {
+        if (!window.angular) {
+          throw new Error('angular could not be found on the window');
+        }
+        if (angular.getTestability) {
+          angular.getTestability(el).whenStable(callback);
+        } else {
+          if (!angular.element(el).injector()) {
+            throw new Error('root element (' + rootSelector + ') has no injector.' +
+            ' this may mean it is not inside ng-app.');
+          }
+          angular.element(el).injector().get('$browser').
+          notifyWhenNoOutstandingRequests(callback);
+        }
+      } catch (err) {
+        callback(err.message);
+      }
+    }
+
     function tryUntilFound(locator, callback, fail, timeout, textToCheck) {
-        var started = new Date().getTime();
+        var started;
 
         function tryFind() {
+            if (!started) {
+                started = new Date().getTime();
+            }
+
             var eles;
             var foundTooMany = false;
             var foundValid = false;
@@ -722,17 +748,17 @@ if (typeof module !== 'undefined'){
 
             if (foundValid) {
                 callback(eles);
-            }
-            else if ((new Date().getTime() - started) < (timeout * 2)) {
-                setTimeout(tryFind, 50);
+            } else if ((new Date().getTime() - started) < timeout * 5) {
+              setTimeout(tryFind, 50);
             } else {
                 fail();
             }
         }
-        //
-        setTimeout(tryFind, timeout);
-        // tryFind();
-        // tryFind();
+        if (window.angular) {
+          waitForAngular('[ng-app]', tryFind);
+        } else {
+          tryFind();
+        }
     }
 
     function getTimeout(scenario, idx) {
@@ -787,20 +813,21 @@ if (typeof module !== 'undefined'){
         var step = steps[i];
         var uniqueId = getUniqueIdFromStep(step);
         if (step.eventName == 'mouseenter' && uniqueId) {
-          var hasValid = false;
-          for (var j = i; j < steps.length; j++) {
+          var remove = false;
+          for (var j = steps.length -1; j >= i; j--) {
             var otherStep = steps[j];
             var otherUniqueId = getUniqueIdFromStep(otherStep);
             if (uniqueId === otherUniqueId) {
               if (otherStep.eventName === 'mouseleave') {
-                if ( (otherStep.timeStamp - step.timeStamp) < 1000) {
-                  steps.splice(i, 1);
-                  steps.splice(j, 1);
-                  i--;
+                var diff =  (otherStep.timeStamp - step.timeStamp);
+                remove = diff < 500;
+              }
+              if (remove) {
+                var diff = steps[j].timeStamp - steps[j - 1].timeStamp;
+                for (var k = j; k < steps.length - 1; k++) {
+                  steps[k].timeStamp -= diff;
                 }
-                break;
-              } else if (otherStep.eventName.indexOf("mouse") != 0) {
-                break;
+                steps.splice(j, 1);
               }
             }
           }
@@ -1008,6 +1035,11 @@ if (typeof module !== 'undefined'){
       $(ele).toggleClass('utme-verify', value);
     }
 
+    function toggleReady(ele, value) {
+      $(ele).toggleClass('utme-ready', value);
+    }
+
+    var timers = [];
     function initEventHandlers() {
         // function nodeInserted(event) {
         //   var ele = $(event.target);
@@ -1073,9 +1105,32 @@ if (typeof module !== 'undefined'){
                           var args =  {
                               locator: utme.createElementLocator(e.target)
                           };
+                          var timer;
 
                           if (e.which || e.button) {
                               args.button = e.which || e.button;
+                          }
+
+                          if (evt == 'mouseover') {
+                            toggleHighlight(e.target, true);
+                            timers.push({
+                              element: e.target,
+                              timer: setTimeout(function() {
+                                toggleReady(e.target, true);
+                                toggleHighlight(e.target, false);
+                              }, 500)
+                            });
+                          }
+                          if (evt == 'mouseout') {
+                            for (var i = 0; i < timers.length; i++) {
+                                if (timers[i].element == e.target) {
+                                    clearTimeout(timers[i].timer);
+                                    timers.splice(i, 1);
+                                    break;
+                                }
+                            }
+                            toggleHighlight(e.target, false);
+                            toggleReady(e.target, false);
                           }
 
                           if (evt == 'change') {
@@ -1352,6 +1407,7 @@ if (typeof module !== 'undefined'){
     function getClassNames(el) {
       var className = el.getAttribute('class');
       className = className && className.replace('utme-verify', '');
+      className = className && className.replace('utme-ready', '');
 
       if (!className || (!className.trim().length)) { return []; }
 
@@ -1386,7 +1442,7 @@ if (typeof module !== 'undefined'){
 
         // IDs are unique enough
         if (el.id) {
-          label = '#' + el.id;
+          label = '[id=\'' + el.id + "\']";
         } else {
           // Otherwise, use tag name
           label     = el.tagName.toLowerCase();
@@ -1691,7 +1747,7 @@ if (typeof module !== "undefined" && module !== null) {
 
 (function(utme, global) {
     var serverReporter = {
-        baseUrl: getParameterByName("utme_test_server") || "http://0.0.0.0:9043/",
+        baseUrl: getParameterByName("utme_test_server") || "http://192.168.200.136:9043/",
         error: function (error, scenario, utme) {
             $.ajax({
               type: "POST",
@@ -1714,6 +1770,10 @@ if (typeof module !== "undefined" && module !== null) {
         loadScenario: function (name, callback) {
             $.ajax({
                 jsonp: "callback",
+
+                contentType: "application/json; charset=utf-8",
+
+                crossDomain: true,
 
                 url:  serverReporter.baseUrl + "scenario/" + name,
 

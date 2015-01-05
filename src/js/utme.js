@@ -121,10 +121,36 @@
         }
     }
 
+    function waitForAngular(rootSelector, callback) {
+      var el = document.querySelector(rootSelector);
+
+      try {
+        if (!window.angular) {
+          throw new Error('angular could not be found on the window');
+        }
+        if (angular.getTestability) {
+          angular.getTestability(el).whenStable(callback);
+        } else {
+          if (!angular.element(el).injector()) {
+            throw new Error('root element (' + rootSelector + ') has no injector.' +
+            ' this may mean it is not inside ng-app.');
+          }
+          angular.element(el).injector().get('$browser').
+          notifyWhenNoOutstandingRequests(callback);
+        }
+      } catch (err) {
+        callback(err.message);
+      }
+    }
+
     function tryUntilFound(locator, callback, fail, timeout, textToCheck) {
-        var started = new Date().getTime();
+        var started;
 
         function tryFind() {
+            if (!started) {
+                started = new Date().getTime();
+            }
+
             var eles;
             var foundTooMany = false;
             var foundValid = false;
@@ -150,17 +176,17 @@
 
             if (foundValid) {
                 callback(eles);
-            }
-            else if ((new Date().getTime() - started) < (timeout * 2)) {
-                setTimeout(tryFind, 50);
+            } else if ((new Date().getTime() - started) < timeout * 5) {
+              setTimeout(tryFind, 50);
             } else {
                 fail();
             }
         }
-        //
-        // setTimeout(tryFind, timeout);
-        tryFind();
-        // tryFind();
+        if (window.angular) {
+          waitForAngular('[ng-app]', tryFind);
+        } else {
+          tryFind();
+        }
     }
 
     function getTimeout(scenario, idx) {
@@ -222,7 +248,7 @@
             if (uniqueId === otherUniqueId) {
               if (otherStep.eventName === 'mouseleave') {
                 var diff =  (otherStep.timeStamp - step.timeStamp);
-                remove = diff < 1000;
+                remove = diff < 500;
               }
               if (remove) {
                 var diff = steps[j].timeStamp - steps[j - 1].timeStamp;
@@ -520,7 +546,7 @@
                               timer: setTimeout(function() {
                                 toggleReady(e.target, true);
                                 toggleHighlight(e.target, false);
-                              }, 1000)
+                              }, 500)
                             });
                           }
                           if (evt == 'mouseout') {
