@@ -39,7 +39,7 @@
             $.ajax({
               type: "POST",
               url: serverReporter.baseUrl + "scenario",
-              data: JSON.stringify(scenario),
+              data: JSON.stringify(scenario, null, " "),
               dataType: 'json',
               contentType: "application/json"
             });

@@ -3,6 +3,7 @@ module.exports = function(grunt) {
   grunt.loadNpmTasks('grunt-contrib-uglify');
   grunt.loadNpmTasks('grunt-contrib-copy');
   grunt.loadNpmTasks('grunt-contrib-watch');
+  grunt.loadNpmTasks('grunt-contrib-concat');
 
   grunt.initConfig({
       copy: {
@@ -29,16 +30,22 @@ module.exports = function(grunt) {
             ]
         },
         build: {
-            options: {
-                mangle: false,
-                beautify: true
-            },
           files: [
-            { src: [
-                'src/js/*.js',
-                'src/js/persisters/*.js',
-                'src/js/reporters/*.js'
-                ],
+            { src: [ 'build/js/utme.js'],
+              dest: 'build/js/utme.js'
+            }
+          ]
+        }
+      },
+      concat: {
+        build: {
+          files: [
+            {
+              src: [
+              'src/js/*.js',
+              'src/js/persisters/*.js',
+              'src/js/reporters/*.js'
+              ],
               dest: 'build/js/utme.js'
             }
           ]
@@ -60,6 +67,7 @@ module.exports = function(grunt) {
   });
 
   grunt.registerTask('default', ['watch']);
-  grunt.registerTask('build', ['uglify:build', 'copy']);
+  grunt.registerTask('build', ['concat:build', 'uglify:build', 'copy']);
+  grunt.registerTask('debugBuild', ['concat:build', 'copy']);
 
 };
