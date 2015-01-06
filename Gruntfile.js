@@ -21,10 +21,12 @@ module.exports = function(grunt) {
             },
             files: [
               { src: [
-                  'src/js/*.js',
+                  'src/js/simulate.js',
+                  'src/js/utme.js',
+                  'src/js/utme-ui.js',
                   'src/js/persisters/*.js',
                   'src/js/reporters/*.js'
-                  ],
+                ],
                 dest: 'build/js/utme.js'
               }
             ]
@@ -42,9 +44,11 @@ module.exports = function(grunt) {
           files: [
             {
               src: [
-              'src/js/*.js',
-              'src/js/persisters/*.js',
-              'src/js/reporters/*.js'
+                'src/js/simulate.js',
+                'src/js/utme.js',
+                'src/js/utme-ui.js',
+                'src/js/persisters/*.js',
+                'src/js/reporters/*.js'
               ],
               dest: 'build/js/utme.js'
             }
