@@ -954,6 +954,8 @@ if (typeof module !== 'undefined'){
 
                     if (utme.isValidating() && e.target.hasAttribute && !e.target.hasAttribute('data-ignore')) {
                         e.preventDefault();
+                        e.stopPropagation();
+                        e.stopImmediatePropagation();
                         if (evt == 'mouseover') {
                             toggleHighlight(e.target, true);
                         }
