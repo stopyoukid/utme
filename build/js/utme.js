@@ -321,7 +321,14 @@ if (typeof module !== 'undefined'){
             state.runningScenario = scenario;
             state.runningStep = idx;
             if (step.eventName == 'load') {
-                window.location = step.data.url.href;
+                var location = step.data.url.protocol + "//" + step.data.url.host + "/";
+                var search = step.data.url.search;
+                var hash = step.data.url.hash;
+                var testServer = getParameterByName("utme_test_server");
+                if (testServer) {
+                    search += (search ? "&" : "?") + "utme_test_server=" + testServer;
+                }
+                window.location = location + search + hash;
                 setTimeout(function() {
                   runNextStep(scenario, idx);
                 }, 500);
@@ -1015,7 +1022,7 @@ if (typeof module !== 'undefined'){
                     if (e.isTrigger)
                         return;
 
-                    if (utme.isValidating() && e.target.hasAttribute && !e.target.hasAttribute('data-ignore')) {
+                    if (utme.isValidating() && e.target.hasAttribute && !e.target.hasAttribute('data-ignore') && $(e.target).parents("[data-ignore]").length == 0) {
                         e.preventDefault();
                         e.stopPropagation();
                         e.stopImmediatePropagation();
@@ -1069,7 +1076,7 @@ if (typeof module !== 'undefined'){
       inputDiv.appendChild(input);
 
       div.appendChild(inputDiv);
-      
+
       div.className = 'utme-input ' + classes;
 
       return div;
@@ -1173,6 +1180,9 @@ if (typeof module !== 'undefined'){
 
         var recordButton = createButton('Record Scenario', 'start', function () {
             if (utme.isRecording() || utme.isValidating()) {
+                if (utme.isValidating()) {
+                    utme.isValidating(false);
+                }
                 showScenarioForm(function(info, form) {
                     destroyScenarioForm();
                     utme.stopRecording(info ? info : false);

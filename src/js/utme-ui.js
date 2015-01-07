@@ -33,7 +33,7 @@
                     if (e.isTrigger)
                         return;
 
-                    if (utme.isValidating() && e.target.hasAttribute && !e.target.hasAttribute('data-ignore')) {
+                    if (utme.isValidating() && e.target.hasAttribute && !e.target.hasAttribute('data-ignore') && $(e.target).parents("[data-ignore]").length == 0) {
                         e.preventDefault();
                         e.stopPropagation();
                         e.stopImmediatePropagation();
@@ -87,7 +87,7 @@
       inputDiv.appendChild(input);
 
       div.appendChild(inputDiv);
-      
+
       div.className = 'utme-input ' + classes;
 
       return div;
@@ -191,6 +191,9 @@
 
         var recordButton = createButton('Record Scenario', 'start', function () {
             if (utme.isRecording() || utme.isValidating()) {
+                if (utme.isValidating()) {
+                    utme.isValidating(false);
+                }
                 showScenarioForm(function(info, form) {
                     destroyScenarioForm();
                     utme.stopRecording(info ? info : false);
