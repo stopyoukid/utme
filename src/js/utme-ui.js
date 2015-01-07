@@ -57,6 +57,102 @@
         }
     }
 
+    function createLabeledInput(text, classes) {
+        var div = document.createElement("div");
+        var label = document.createElement("label");
+        var input = document.createElement("input");
+        input.type = 'text';
+
+        label.innerHTML = "<span>" + text + "</span>";
+        div.appendChild(label);
+
+        var inputDiv = document.createElement("div");
+        inputDiv.appendChild(input);
+
+        div.appendChild(inputDiv);
+
+        div.className = 'utme-input ' + classes;
+
+        return div;
+    }
+
+    function createLabeledTextArea(text, classes) {
+      var div = document.createElement("div");
+      var label = document.createElement("label");
+      var input = document.createElement("textarea");
+      label.innerHTML = "<span>" + text + "</span>";
+      div.appendChild(label);
+
+      var inputDiv = document.createElement("div");
+      inputDiv.appendChild(input);
+
+      div.appendChild(inputDiv);
+      
+      div.className = 'utme-input ' + classes;
+
+      return div;
+    }
+
+    function showScenarioForm(callback) {
+        var form = document.createElement('div');
+        form.className = 'utme-scenario-form';
+        form.setAttribute('data-ignore', true);
+
+        var nameInput = createLabeledInput('Scenario Name:', '');
+        form.appendChild(nameInput);
+
+        var descriptionInput = createLabeledTextArea('Description (Optional):', '');
+        form.appendChild(descriptionInput);
+
+        var setupInput = createLabeledTextArea('Setup Scenarios (Optional, Newline separated):', '');
+        form.appendChild(setupInput);
+
+        form.appendChild(createButton('Save', 'okButton', function(e) {
+          var name = nameInput.querySelector("input").value;
+          var description = descriptionInput.querySelector("textarea").value;
+          var setup = setupInput.querySelector("textarea").value;
+
+          var info = {};
+          if (name) {
+              info.name = name;
+          }
+
+          if (description) {
+              info.description = description;
+          }
+
+          if (setup) {
+              info.setup = {
+                  scenarios: setup.split("\n")
+              };
+          }
+
+          e.stopPropagation();
+          callback(info);
+        }));
+
+        form.appendChild(createButton('Cancel', 'cancelButton', function(e) {
+          e.stopPropagation();
+          callback();
+        }));
+
+        var overlay = document.createElement('div');
+        overlay.className = 'utme-scenario-form-background';
+        overlay.setAttribute('data-ignore', true);
+
+        document.body.appendChild(overlay);
+        document.body.appendChild(form);
+        return overlay;
+    }
+
+    function destroyScenarioForm() {
+        var form = document.querySelectorAll('.utme-scenario-form')[0];
+        var overlay = document.querySelectorAll('.utme-scenario-form-background')[0];
+
+        form.parentNode.removeChild(form);
+        overlay.parentNode.removeChild(overlay);
+    }
+
     function initControls() {
         initEventListeners();
 
@@ -95,7 +191,10 @@
 
         var recordButton = createButton('Record Scenario', 'start', function () {
             if (utme.isRecording() || utme.isValidating()) {
-                utme.stopRecording();
+                showScenarioForm(function(info, form) {
+                    destroyScenarioForm();
+                    utme.stopRecording(info ? info : false);
+                });
             } else {
                 utme.startRecording();
             }

@@ -481,23 +481,32 @@
             }
             return utme.state.status.indexOf("VALIDATING") === 0;
         },
-        stopRecording: function () {
-            var newScenario = {
-                name: prompt('Enter scenario name'),
-                steps: state.steps
-            };
-            if (newScenario.name) {
+        stopRecording: function (info) {
+            if (info !== false) {
+                var newScenario = {
+                    steps: state.steps
+                };
 
-                postProcessSteps(state.steps);
+                $.extend(newScenario, info);
 
-                state.scenarios.push(newScenario);
+                if (!newScenario.name) {
+                    newScenario.name = prompt('Enter scenario name');
+                }
 
-                if (saveHandlers && saveHandlers.length) {
-                    for (var i = 0; i < saveHandlers.length; i++) {
-                        saveHandlers[i](newScenario, utme);
+                if (newScenario.name) {
+
+                    postProcessSteps(newScenario.steps);
+
+                    state.scenarios.push(newScenario);
+
+                    if (saveHandlers && saveHandlers.length) {
+                        for (var i = 0; i < saveHandlers.length; i++) {
+                            saveHandlers[i](newScenario, utme);
+                        }
                     }
                 }
             }
+
             state.status = 'LOADED';
 
             utme.broadcast('RECORDING_STOPPED');
@@ -549,7 +558,7 @@
                     if (e.isTrigger)
                         return;
 
-                    if (utme.isRecording() && e.target.hasAttribute && !e.target.hasAttribute('data-ignore')) {
+                    if (utme.isRecording() && e.target.hasAttribute && !e.target.hasAttribute('data-ignore') && $(e.target).parents("[data-ignore]").length == 0) {
                           var idx = utme.state.steps.length;
                           var args = {
                               locator: utme.createElementLocator(e.target)
@@ -635,7 +644,10 @@
         };
 
         document.addEventListener('keypress', function (e) {
-            if (utme.isRecording() && !e.target.hasAttribute('data-ignore')) {
+            if (e.isTrigger)
+                return;
+
+            if (utme.isRecording() && e.target.hasAttribute && !e.target.hasAttribute('data-ignore') && $(e.target).parents("[data-ignore]").length == 0) {
                 var c = e.which;
 
                 // TODO: Doesn't work with caps lock
