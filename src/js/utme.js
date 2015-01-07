@@ -52,6 +52,9 @@
             state.runningStep = idx;
             if (step.eventName == 'load') {
                 window.location = step.data.url.href;
+                setTimeout(function() {
+                  runNextStep(scenario, idx);
+                }, 500);
             } else if (step.eventName == 'timeout') {
                 setTimeout(function () {
                     if (state.autoRun) {
@@ -226,7 +229,7 @@
         for (var i = 0; i < steps.length; i++) {
             var step = steps[i];
             var locator = step && step.data.locator;
-            var selector = locator.selectors[0];
+            var selector = locator && locator.selectors[0];
             if (selector && selector.doc) {
                 var frag = fragmentFromString(selector.doc);
                 var ele = frag.querySelectorAll('[data-unique-id=\'' + selector.id + '\']');
@@ -245,32 +248,34 @@
         // Scrub short events
         for (var i = 0; i < steps.length; i++) {
             var step = steps[i];
-            var uniqueId = getUniqueIdFromStep(step);
-            var hoverLength = i > 0 ? (step.timeStamp - steps[i - 1].timeStamp) : 0;
-            if (hoverLength >= 500 && steps[i - 1].eventName == 'mouseover') {
-                for (var k = i; i < steps.length - 1; i++) {
-                    steps[k].timeStamp -= hoverLength;
-                }
-            }
-            if (step.eventName == 'mouseenter' && uniqueId) {
-                var remove = false;
-                for (var j = steps.length - 1; j >= i; j--) {
-                    var otherStep = steps[j];
-                    var otherUniqueId = getUniqueIdFromStep(otherStep);
-                    if (uniqueId === otherUniqueId) {
-                        if (otherStep.eventName === 'mouseleave') {
-                            var diff = (otherStep.timeStamp - step.timeStamp);
-                            remove = diff < 500;
-                        }
-                        if (remove) {
-                            var diff = steps[j + 1].timeStamp - steps[j].timeStamp;
-                            for (var k = j; k < steps.length - 1; k++) {
-                                steps[k].timeStamp -= diff;
-                            }
-                            steps.splice(j, 1);
-                        }
-                    }
-                }
+            if (step && step.data && step.data.locator) {
+              var uniqueId = getUniqueIdFromStep(step);
+              var hoverLength = i > 0 ? (step.timeStamp - steps[i - 1].timeStamp) : 0;
+              if (hoverLength >= 500 && steps[i - 1].eventName == 'mouseover') {
+                  for (var k = i; i < steps.length - 1; i++) {
+                      steps[k].timeStamp -= hoverLength;
+                  }
+              }
+              if (step.eventName == 'mouseenter' && uniqueId) {
+                  var remove = false;
+                  for (var j = steps.length - 1; j >= i; j--) {
+                      var otherStep = steps[j];
+                      var otherUniqueId = getUniqueIdFromStep(otherStep);
+                      if (uniqueId === otherUniqueId) {
+                          if (otherStep.eventName === 'mouseleave') {
+                              var diff = (otherStep.timeStamp - step.timeStamp);
+                              remove = diff < 500;
+                          }
+                          if (remove) {
+                              var diff = steps[j + 1].timeStamp - steps[j].timeStamp;
+                              for (var k = j; k < steps.length - 1; k++) {
+                                  steps[k].timeStamp -= diff;
+                              }
+                              steps.splice(j, 1);
+                          }
+                      }
+                  }
+              }
             }
         }
     }
@@ -324,6 +329,10 @@
                 state.steps = [];
                 utme.reportLog("Recording Started");
                 utme.broadcast('RECORDING_STARTED');
+
+                utme.registerEvent("load", {
+                  url: window.location
+                });
             }
         },
         runScenario: function (name) {
@@ -334,13 +343,55 @@
 
                 simplifySteps(scenario.steps);
 
-                state.autoRun = autoRun == true;
-                state.status = "PLAYING";
+                function _runScenario() {
+                    state.autoRun = autoRun == true;
+                    state.status = "PLAYING";
 
-                utme.reportLog("Starting Scenario '" + name + "'", scenario);
-                utme.broadcast('PLAYBACK_STARTED');
+                    utme.reportLog("Starting Scenario '" + name + "'", scenario);
+                    utme.broadcast('PLAYBACK_STARTED');
 
-                runStep(scenario, 0);
+                    runStep(scenario, 0);
+                }
+
+                var setup = scenario.setup;
+                var preconditions = setup && setup.scenarios;
+                if (preconditions) {
+
+                    // TODO: Break out into helper
+                    var setupSteps = [];
+                    var loadedCount = 0;
+                    for (var i = 0; i < preconditions.length; i++) {
+                        (function(idx) {
+                          getScenario(preconditions[idx], function (otherScenario) {
+                              otherScenario = JSON.parse(JSON.stringify(otherScenario));
+                              simplifySteps(otherScenario.steps);
+
+                              setupSteps[idx] = otherScenario.steps;
+                              loadedCount++;
+                              if (loadedCount == preconditions.length) {
+                                  setupSteps.push(scenario.steps);
+
+                                  var newSteps = [];
+                                  for (var j = 0; j < setupSteps.length; j++) {
+                                      var steps = setupSteps[j];
+                                      if (j > 0) {
+                                        var previousLastStep = setupSteps[j - 1][setupSteps[j - 1].length - 1];
+                                        var diff = previousLastStep.timeStamp - steps[0].timeStamp;
+                                        for (var k = 0; k < steps.length; k++) {
+                                            steps[k].timeStamp += diff;
+                                        }
+                                      }
+                                      newSteps = newSteps.concat(steps);
+                                  }
+                                  scenario.steps = newSteps;
+                                  _runScenario();
+                              }
+                          });
+                        })(i);
+                    }
+                } else {
+                    _runScenario();
+                }
             });
         },
         runNextStep: runNextStep,
