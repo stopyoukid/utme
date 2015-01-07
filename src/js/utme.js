@@ -413,6 +413,8 @@
 
             if (success) {
                 utme.reportLog("[SUCCESS] Scenario '" + scenario.name + "' Completed!");
+            } else {
+                utme.reportError("[FAILURE] Scenario '" + scenario.name + "' Completed!");
             }
         },
         createElementLocator: function (element) {
