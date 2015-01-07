@@ -22,6 +22,7 @@ module.exports = function(grunt) {
             files: [
               { src: [
                   'src/js/simulate.js',
+		  'src/js/selectorFinder.js',
                   'src/js/utme.js',
                   'src/js/utme-ui.js',
                   'src/js/persisters/*.js',
@@ -45,6 +46,7 @@ module.exports = function(grunt) {
             {
               src: [
                 'src/js/simulate.js',
+		'src/js/selectorFinder.js',
                 'src/js/utme.js',
                 'src/js/utme-ui.js',
                 'src/js/persisters/*.js',

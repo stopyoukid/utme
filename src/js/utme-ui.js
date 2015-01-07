@@ -25,7 +25,7 @@
     }
 
     function initEventListeners() {
-        var events = ['mouseover', 'mouseout'];
+        var events = ['mouseover', 'mouseout', 'mouseenter', 'mouseleave', 'mousedown', 'mouseup', 'click'];
 
         for (var i = 0; i < events.length; i++) {
             document.addEventListener(events[i], (function (evt) {
@@ -45,7 +45,7 @@
                             utme.registerEvent('validate', {
                                 locator: utme.createElementLocator(e.target),
                                 text: $(e.target).text()
-                            }, idx);
+                            });
                         }
                         return false;
                     }
