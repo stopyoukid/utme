@@ -500,8 +500,8 @@
         },
         isValidating: function(validating) {
             if (typeof validating !== 'undefined' && (utme.isRecording() || utme.isValidating())) {
-                utme.broadcast('VALIDATION_CHANGED');
                 utme.state.status = validating ? "VALIDATING" : "RECORDING";
+                utme.broadcast('VALIDATION_CHANGED');
             }
             return utme.state.status.indexOf("VALIDATING") === 0;
         },

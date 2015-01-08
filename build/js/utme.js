@@ -770,8 +770,8 @@ if (typeof module !== 'undefined'){
         },
         isValidating: function(validating) {
             if (typeof validating !== 'undefined' && (utme.isRecording() || utme.isValidating())) {
-                utme.broadcast('VALIDATION_CHANGED');
                 utme.state.status = validating ? "VALIDATING" : "RECORDING";
+                utme.broadcast('VALIDATION_CHANGED');
             }
             return utme.state.status.indexOf("VALIDATING") === 0;
         },
@@ -1061,6 +1061,28 @@ if (typeof module !== 'undefined'){
                 return handler;
             })(events[i]), true);
         }
+
+        // Add in some validation hot keys
+        document.addEventListener('keydown', function (e) {
+            var evtobj = window.event? event : e
+            if (utme.isValidating() || utme.isRecording()) {
+                if (evtobj.keyCode == 86 && evtobj.ctrlKey && evtobj.altKey) {
+                    utme.isValidating(!utme.isValidating());
+                }
+            }
+
+
+            if (evtobj.keyCode == 82 && evtobj.ctrlKey && evtobj.altKey) {
+                if (utme.isRecording() || utme.isValidating()) {
+                    showScenarioForm(function(info, form) {
+                        destroyScenarioForm();
+                        utme.stopRecording(info ? info : false);
+                    });
+                } else if (!utme.isRecording())  {
+                    utme.startRecording();
+                }
+            }
+        });
     }
 
     function createLabeledInput(text, classes) {
