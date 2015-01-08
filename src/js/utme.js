@@ -128,7 +128,7 @@
                     }
                 }
 
-                tryUntilFound(step, locator, foundElement, notFoundElement, getTimeout(scenario, idx), step.data.text);
+                tryUntilFound(step, locator, foundElement, notFoundElement, getTimeout(scenario, idx));
             }
         } else {
 
@@ -174,12 +174,15 @@
             var foundValid = false;
             var foundDifferentText = false;
             var selectorsToTest = locator.selectors.slice(0);
+            var textToCheck = step.data.text;
+            var comparison = step.data.comparison || "equals";
             for (var i = 0; i < selectorsToTest.length; i++) {
                 eles = $(selectorsToTest[i]);
                 if (eles.length == 1) {
                     if (typeof textToCheck != 'undefined') {
                         var newText = $(eles[0]).text();
-                        if (newText == textToCheck) {
+                        if ((comparison === 'equals' && newText === textToCheck) ||
+                            (comparison === 'contains' && newText.indexOf(textToCheck) >= 0)) {
                             foundValid = true;
                             break;
                         } else {
