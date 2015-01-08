@@ -385,12 +385,13 @@ if (typeof module !== 'undefined'){
                     }
                 }
 
-                function notFoundElement() {
+                function notFoundElement(result) {
+
                     if (step.eventName == 'validate') {
-                        utme.reportError('Could not find appropriate element for selectors: ' + JSON.stringify(locator.selectors) + " for event " + step.eventName);
-                        utme.stopScenario();
+                        utme.reportLog("Validate: " + result);
+                        utme.stopScenario(false);
                     } else {
-                        utme.reportLog('Could not find appropriate element for selectors: ' + JSON.stringify(locator.selectors) + " for event " + step.eventName);
+                        utme.reportLog(result);
                         if (state.autoRun) {
                             runNextStep(scenario, idx);
                         }
@@ -441,6 +442,7 @@ if (typeof module !== 'undefined'){
             var eles;
             var foundTooMany = false;
             var foundValid = false;
+            var foundDifferentText = false;
             var selectorsToTest = locator.selectors.slice(0);
             for (var i = 0; i < selectorsToTest.length; i++) {
                 eles = $(selectorsToTest[i]);
@@ -450,6 +452,8 @@ if (typeof module !== 'undefined'){
                         if (newText == textToCheck) {
                             foundValid = true;
                             break;
+                        } else {
+                            foundDifferentText = true;
                         }
                     } else {
                         foundValid = true;
@@ -466,7 +470,15 @@ if (typeof module !== 'undefined'){
             } else if (isImportantStep(step) && (new Date().getTime() - started) < timeout * 5) {
                 setTimeout(tryFind, 50);
             } else {
-                fail();
+                var result = "";
+                if (foundTooMany) {
+                    result = 'Could not find appropriate element for selectors: ' + JSON.stringify(locator.selectors) + " for event " + step.eventName + ".  Reason: Found Too Many Elements";
+                } else if (foundDifferentText) {
+                    result = 'Could not find appropriate element for selectors: ' + JSON.stringify(locator.selectors) + " for event " + step.eventName + ".  Reason: Text doesn't match.  \nExpected:\n" + textToCheck + "\nbut was\n" + eles.text() + "\n";
+                } else {
+                    result = 'Could not find appropriate element for selectors: ' + JSON.stringify(locator.selectors) + " for event " + step.eventName + ".  Reason: No elements found";
+                }
+                fail(result);
             }
         }
         if (global.angular) {
@@ -683,6 +695,8 @@ if (typeof module !== 'undefined'){
 
             if (success) {
                 utme.reportLog("[SUCCESS] Scenario '" + scenario.name + "' Completed!");
+            } else {
+                utme.reportError("[FAILURE] Scenario '" + scenario.name + "' Completed!");
             }
         },
         createElementLocator: function (element) {
@@ -1032,7 +1046,7 @@ if (typeof module !== 'undefined'){
                         if (evt == 'mouseout') {
                             toggleHighlight(e.target, false);
                         }
-                        if (evt == 'click' || evt == 'mousedown') {
+                        if (evt == 'mousedown') {
                             utme.registerEvent('validate', {
                                 locator: utme.createElementLocator(e.target),
                                 text: $(e.target).text()

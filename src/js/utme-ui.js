@@ -43,7 +43,7 @@
                         if (evt == 'mouseout') {
                             toggleHighlight(e.target, false);
                         }
-                        if (evt == 'click' || evt == 'mousedown') {
+                        if (evt == 'mousedown') {
                             utme.registerEvent('validate', {
                                 locator: utme.createElementLocator(e.target),
                                 text: $(e.target).text()
