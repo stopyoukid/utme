@@ -448,7 +448,7 @@ if (typeof module !== 'undefined'){
             var comparison = step.data.comparison || "equals";
             for (var i = 0; i < selectorsToTest.length; i++) {
                 var selector = selectorsToTest[i];
-                if (step.eventName == 'mouseenter' || step.eventName == 'mousedown') {
+                if (isImportantStep(step)) {
                     selector += ":visible";
                 }
                 eles = $(selector);
