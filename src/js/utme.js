@@ -128,7 +128,7 @@
                     }
                 }
 
-                tryUntilFound(step, locator, foundElement, notFoundElement, getTimeout(scenario, idx));
+                tryUntilFound(scenario, step, locator, foundElement, notFoundElement, getTimeout(scenario, idx));
             }
         } else {
 
@@ -161,7 +161,7 @@
         return step.eventName != 'mouseleave' && step.eventName != 'mouseout' && step.eventName != 'blur';
     }
 
-    function tryUntilFound(step, locator, callback, fail, timeout, textToCheck) {
+    function tryUntilFound(scenario, step, locator, callback, fail, timeout, textToCheck) {
         var started;
 
         function tryFind() {
@@ -177,7 +177,11 @@
             var textToCheck = step.data.text;
             var comparison = step.data.comparison || "equals";
             for (var i = 0; i < selectorsToTest.length; i++) {
-                eles = $(selectorsToTest[i]);
+                var selector = selectorsToTest[i];
+                if (step.eventName == 'mouseenter' || step.eventName == 'mousedown') {
+                    selector += ":visible";
+                }
+                eles = $(selector);
                 if (eles.length == 1) {
                     if (typeof textToCheck != 'undefined') {
                         var newText = $(eles[0]).text();
@@ -222,11 +226,15 @@
     }
 
     function getTimeout(scenario, idx) {
-        if (scenario.steps[idx].eventName == 'mousemove' ||
-            scenario.steps[idx].eventName.indexOf("key") >= 0 ||
-            scenario.steps[idx].eventName == 'validate') {
-            return 0;
-        } else if (idx > 0) {
+        if (idx > 0) {
+            // If the previous step is a validate step, then just move on, and pretend it isn't there
+            // Or if it is a series of keys, then go
+
+            if (scenario.steps[idx].eventName == 'mousemove' ||
+                scenario.steps[idx - 1].eventName.indexOf("key") >= 0 ||
+                scenario.steps[idx - 1].eventName == 'validate') {
+                return 0;
+            }
             return scenario.steps[idx].timeStamp - scenario.steps[idx - 1].timeStamp;
         }
         return 0;
@@ -353,7 +361,7 @@
                 utme.broadcast('RECORDING_STARTED');
 
                 utme.registerEvent("load", {
-                  url: window.location
+                    url: JSON.parse(JSON.stringify(window.location))
                 });
             }
         },
@@ -715,7 +723,7 @@
 
             if (utme.isRecording()) {
                 utme.registerEvent("load", {
-                    url: window.location
+                    url: JSON.parse(JSON.stringify(window.location))
                 });
             }
         }
