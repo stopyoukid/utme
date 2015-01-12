@@ -312,8 +312,9 @@ if (typeof module !== 'undefined'){
         // 'scroll'
     ];
 
-    function runStep(scenario, idx) {
+    function runStep(scenario, idx, toSkip) {
         utme.broadcast('RUNNING_STEP');
+        toSkip = toSkip || {};
 
         var step = scenario.steps[idx];
         var state = utme.state;
@@ -330,42 +331,72 @@ if (typeof module !== 'undefined'){
                 }
                 window.location = location + search + hash;
                 setTimeout(function() {
-                  runNextStep(scenario, idx);
+                  runNextStep(scenario, idx, toSkip);
                 }, 500);
             } else if (step.eventName == 'timeout') {
                 setTimeout(function () {
                     if (state.autoRun) {
-                        runNextStep(scenario, idx);
+                        runNextStep(scenario, idx, toSkip);
                     }
                 }, step.data.amount);
             } else {
                 var locator = step.data.locator;
+                var steps = scenario.steps;
+                var uniqueId = getUniqueIdFromStep(step);
 
-                function foundElement(eles) {
+                // try to get rid of unnecessary steps
+                if (typeof toSkip[uniqueId] == 'undefined') {
+                  var diff;
+                  var ignore = false;
+                  for (var j = steps.length - 1; j >= idx; j--) {
+                    var otherStep = steps[j];
+                    var otherUniqueId = getUniqueIdFromStep(otherStep);
+                    if (uniqueId === otherUniqueId) {
+                      if (!diff) {
+                          diff = (otherStep.timeStamp - step.timeStamp);
+                          ignore = !isImportantStep(otherStep) && diff < 500;
+                      } else if (isImportantStep(otherStep)) {
+                          ignore = false;
+                          break;
+                      }
+                    }
+                  }
 
-                    var ele = eles[0];
-                    if (events.indexOf(step.eventName) >= 0) {
+                  if (ignore) {
+                      toSkip[uniqueId] = true;
+                      console.log("Skipping " + locator.selectors[0]);
+                  }
+                }
+
+                // We're skipping this element
+                if (toSkip[getUniqueIdFromStep(step)]) {
+                    runNextStep(scenario, idx, toSkip);
+                } else {
+                    tryUntilFound(scenario, step, locator, function (eles) {
+
+                      var ele = eles[0];
+                      if (events.indexOf(step.eventName) >= 0) {
                         var options = {};
                         if (step.data.button) {
-                            options.which = options.button = step.data.button;
+                          options.which = options.button = step.data.button;
                         }
 
                         // console.log('Simulating ' + step.eventName + ' on element ', ele, locator.selectors[0], " for step " + idx);
                         if (step.eventName == 'click') {
-                            $(ele).trigger('click');
+                          $(ele).trigger('click');
                         } else if ((step.eventName == 'focus' || step.eventName == 'blur') && ele[step.eventName]) {
-                            ele[step.eventName]();
+                          ele[step.eventName]();
                         } else {
-                            Simulate[step.eventName](ele, options);
+                          Simulate[step.eventName](ele, options);
                         }
 
                         if (typeof step.data.value != "undefined") {
-                            ele.value = step.data.value;
-                            Simulate.event(ele, 'change');
+                          ele.value = step.data.value;
+                          Simulate.event(ele, 'change');
                         }
-                    }
+                      }
 
-                    if (step.eventName == 'keypress') {
+                      if (step.eventName == 'keypress') {
                         var key = String.fromCharCode(step.data.keyCode);
                         Simulate.keypress(ele, key);
                         Simulate.keydown(ele, key);
@@ -374,31 +405,27 @@ if (typeof module !== 'undefined'){
                         Simulate.event(ele, 'change');
 
                         Simulate.keyup(ele, key);
-                    }
+                      }
 
-                    if (step.eventName == 'validate') {
+                      if (step.eventName == 'validate') {
                         utme.reportLog('Validate: ' + JSON.stringify(locator.selectors)  + " contains text '"  + step.data.text + "'");
-                    }
+                      }
 
-                    if (state.autoRun) {
-                        runNextStep(scenario, idx);
-                    }
-                }
-
-                function notFoundElement(result) {
-
-                    if (step.eventName == 'validate') {
-                        utme.reportLog("Validate: " + result);
-                        utme.stopScenario(false);
-                    } else {
-                        utme.reportLog(result);
-                        if (state.autoRun) {
-                            runNextStep(scenario, idx);
+                      if (state.autoRun) {
+                        runNextStep(scenario, idx, toSkip);
+                      }
+                    }, function (result) {
+                        if (step.eventName == 'validate') {
+                          utme.reportLog("Validate: " + result);
+                          utme.stopScenario(false);
+                        } else {
+                          utme.reportLog(result);
+                          if (state.autoRun) {
+                            runNextStep(scenario, idx, toSkip);
+                          }
                         }
-                    }
+                    }, getTimeout(scenario, idx));
                 }
-
-                tryUntilFound(scenario, step, locator, foundElement, notFoundElement, getTimeout(scenario, idx));
             }
         } else {
 
@@ -474,7 +501,7 @@ if (typeof module !== 'undefined'){
 
             if (foundValid) {
                 callback(eles);
-            } else if (isImportantStep(step) && (new Date().getTime() - started) < timeout * 5) {
+            } else if ((new Date().getTime() - started) < timeout * 5) {
                 setTimeout(tryFind, 50);
             } else {
                 var result = "";
@@ -489,7 +516,13 @@ if (typeof module !== 'undefined'){
             }
         }
         if (global.angular) {
-            waitForAngular('[ng-app]', tryFind);
+            waitForAngular('[ng-app]', function() {
+              if (timeout > 500) {
+                  setTimeout(tryFind, timeout);
+              } else {
+                  tryFind();
+              }
+            });
         } else {
             tryFind();
         }
@@ -510,9 +543,9 @@ if (typeof module !== 'undefined'){
         return 0;
     }
 
-    function runNextStep(scenario, idx) {
+    function runNextStep(scenario, idx, toSkip) {
         if (scenario.steps.length > (idx + 1)) {
-            runStep(scenario, idx + 1);
+            runStep(scenario, idx + 1, toSkip);
         } else {
             utme.stopScenario(true);
         }
@@ -641,7 +674,7 @@ if (typeof module !== 'undefined'){
             getScenario(toRun, function (scenario) {
                 scenario = JSON.parse(JSON.stringify(scenario));
 
-                simplifySteps(scenario.steps);
+                // simplifySteps(scenario.steps);
 
                 function _runScenario() {
                     state.autoRun = autoRun == true;
@@ -850,6 +883,16 @@ if (typeof module !== 'undefined'){
         $(ele).toggleClass('utme-ready', value);
     }
 
+    /**
+     * If you click on a span in a label, the span will click,
+     * then the browser will fire the click event for the input contained within the span,
+     * So, we only want to track the input clicks.
+     */
+    function isNotInLabelOrValid(ele) {
+        return $(ele).parents('label').length == 0 ||
+              ele.nodeName.toLowerCase() == 'input';
+    }
+
     var timers = [];
 
     function initEventHandlers() {
@@ -860,7 +903,11 @@ if (typeof module !== 'undefined'){
                     if (e.isTrigger)
                         return;
 
-                    if (utme.isRecording() && e.target.hasAttribute && !e.target.hasAttribute('data-ignore') && $(e.target).parents("[data-ignore]").length == 0) {
+                    if (utme.isRecording() &&
+                        e.target.hasAttribute &&
+                        !e.target.hasAttribute('data-ignore') &&
+                        $(e.target).parents("[data-ignore]").length == 0 &&
+                        isNotInLabelOrValid(e.target)) {
                           var idx = utme.state.steps.length;
                           var args = {
                               locator: utme.createElementLocator(e.target)
