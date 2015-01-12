@@ -271,6 +271,7 @@ if (typeof module !== 'undefined'){
 (function (global, Simulate, selectorFinder) {
 
     // var myGenerator = new CssSelectorGenerator();
+    var importantStepLength = 500;
     var saveHandlers = [];
     var reportHandlers = [];
     var loadHandlers = [];
@@ -332,7 +333,7 @@ if (typeof module !== 'undefined'){
                 window.location = location + search + hash;
                 setTimeout(function() {
                   runNextStep(scenario, idx, toSkip);
-                }, 500);
+                }, importantStepLength);
             } else if (step.eventName == 'timeout') {
                 setTimeout(function () {
                     if (state.autoRun) {
@@ -343,9 +344,10 @@ if (typeof module !== 'undefined'){
                 var locator = step.data.locator;
                 var steps = scenario.steps;
                 var uniqueId = getUniqueIdFromStep(step);
+                // var limit = importantStepLength / utme.state.runSpeed;
 
                 // try to get rid of unnecessary steps
-                if (typeof toSkip[uniqueId] == 'undefined') {
+                if (typeof toSkip[uniqueId] == 'undefined' && utme.state.runSpeed != 'realtime') {
                   var diff;
                   var ignore = false;
                   for (var j = steps.length - 1; j >= idx; j--) {
@@ -354,7 +356,7 @@ if (typeof module !== 'undefined'){
                     if (uniqueId === otherUniqueId) {
                       if (!diff) {
                           diff = (otherStep.timeStamp - step.timeStamp);
-                          ignore = !isImportantStep(otherStep) && diff < 500;
+                          ignore = !isImportantStep(otherStep) && diff < importantStepLength;
                       } else if (isImportantStep(otherStep)) {
                           ignore = false;
                           break;
@@ -364,7 +366,6 @@ if (typeof module !== 'undefined'){
 
                   if (ignore) {
                       toSkip[uniqueId] = true;
-                      console.log("Skipping " + locator.selectors[0]);
                   }
                 }
 
@@ -473,6 +474,7 @@ if (typeof module !== 'undefined'){
             var selectorsToTest = locator.selectors.slice(0);
             var textToCheck = step.data.text;
             var comparison = step.data.comparison || "equals";
+            selectorsToTest.unshift('[data-unique-id="' + locator.uniqueId + '"]');
             for (var i = 0; i < selectorsToTest.length; i++) {
                 var selector = selectorsToTest[i];
                 if (isImportantStep(step)) {
@@ -491,6 +493,7 @@ if (typeof module !== 'undefined'){
                         }
                     } else {
                         foundValid = true;
+                        eles.attr('data-unique-id', locator.uniqueId);
                         break;
                     }
                     break;
@@ -515,16 +518,23 @@ if (typeof module !== 'undefined'){
                 fail(result);
             }
         }
+
+        var runSpeed = utme.state.runSpeed == 'realtime' ? '1' : utme.state.runSpeed;
+        var limit = importantStepLength / utme.state.runSpeed;
         if (global.angular) {
             waitForAngular('[ng-app]', function() {
-              if (timeout > 500) {
-                  setTimeout(tryFind, timeout);
+              if (timeout >= importantStepLength) {
+                  setTimeout(tryFind, utme.state.runSpeed == 'realtime' ? timeout : Math.min(timeout * utme.state.runSpeed, limit));
               } else {
                   tryFind();
               }
             });
         } else {
-            tryFind();
+            if (timeout >= importantStepLength) {
+                setTimeout(tryFind, utme.state.runSpeed == 'realtime' ? timeout : Math.min(timeout * utme.state.runSpeed, limit));
+            } else {
+                tryFind();
+            }
         }
     }
 
@@ -574,43 +584,6 @@ if (typeof module !== 'undefined'){
 
     function getUniqueIdFromStep(step) {
         return step && step.data && step.data.locator && step.data.locator.uniqueId;
-    }
-
-    function simplifySteps(steps) {
-
-        // Scrub short events
-        for (var i = 0; i < steps.length; i++) {
-            var step = steps[i];
-            if (step && step.data && step.data.locator) {
-              var uniqueId = getUniqueIdFromStep(step);
-              var hoverLength = i > 0 ? (step.timeStamp - steps[i - 1].timeStamp) : 0;
-              if (hoverLength >= 500 && steps[i - 1].eventName == 'mouseover') {
-                  for (var k = i; i < steps.length - 1; i++) {
-                      steps[k].timeStamp -= hoverLength;
-                  }
-              }
-              if (step.eventName == 'mouseenter' && uniqueId) {
-                  var remove = false;
-                  for (var j = steps.length - 1; j >= i; j--) {
-                      var otherStep = steps[j];
-                      var otherUniqueId = getUniqueIdFromStep(otherStep);
-                      if (uniqueId === otherUniqueId) {
-                          if (otherStep.eventName === 'mouseleave') {
-                              var diff = (otherStep.timeStamp - step.timeStamp);
-                              remove = diff < 500;
-                          }
-                          if (remove) {
-                              var diff = steps[j + 1].timeStamp - steps[j].timeStamp;
-                              for (var k = j; k < steps.length - 1; k++) {
-                                  steps[k].timeStamp -= diff;
-                              }
-                              steps.splice(j, 1);
-                          }
-                      }
-                  }
-              }
-            }
-        }
     }
 
     var guid = (function () {
@@ -673,9 +646,7 @@ if (typeof module !== 'undefined'){
             var autoRun = !name ? prompt('Would you like to step through each step (y|n)?') != 'y' : true;
             getScenario(toRun, function (scenario) {
                 scenario = JSON.parse(JSON.stringify(scenario));
-
-                // simplifySteps(scenario.steps);
-
+                utme.state.runSpeed = getParameterByName('utme_run_speed') || '10';
                 function _runScenario() {
                     state.autoRun = autoRun == true;
                     state.status = "PLAYING";
@@ -697,8 +668,6 @@ if (typeof module !== 'undefined'){
                         (function(idx) {
                           getScenario(preconditions[idx], function (otherScenario) {
                               otherScenario = JSON.parse(JSON.stringify(otherScenario));
-                              simplifySteps(otherScenario.steps);
-
                               setupSteps[idx] = otherScenario.steps;
                               loadedCount++;
                               if (loadedCount == preconditions.length) {

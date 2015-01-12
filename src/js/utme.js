@@ -1,6 +1,7 @@
 (function (global, Simulate, selectorFinder) {
 
     // var myGenerator = new CssSelectorGenerator();
+    var importantStepLength = 500;
     var saveHandlers = [];
     var reportHandlers = [];
     var loadHandlers = [];
@@ -62,7 +63,7 @@
                 window.location = location + search + hash;
                 setTimeout(function() {
                   runNextStep(scenario, idx, toSkip);
-                }, 500);
+                }, importantStepLength);
             } else if (step.eventName == 'timeout') {
                 setTimeout(function () {
                     if (state.autoRun) {
@@ -73,9 +74,10 @@
                 var locator = step.data.locator;
                 var steps = scenario.steps;
                 var uniqueId = getUniqueIdFromStep(step);
+                // var limit = importantStepLength / utme.state.runSpeed;
 
                 // try to get rid of unnecessary steps
-                if (typeof toSkip[uniqueId] == 'undefined') {
+                if (typeof toSkip[uniqueId] == 'undefined' && utme.state.runSpeed != 'realtime') {
                   var diff;
                   var ignore = false;
                   for (var j = steps.length - 1; j >= idx; j--) {
@@ -84,7 +86,7 @@
                     if (uniqueId === otherUniqueId) {
                       if (!diff) {
                           diff = (otherStep.timeStamp - step.timeStamp);
-                          ignore = !isImportantStep(otherStep) && diff < 500;
+                          ignore = !isImportantStep(otherStep) && diff < importantStepLength;
                       } else if (isImportantStep(otherStep)) {
                           ignore = false;
                           break;
@@ -94,7 +96,6 @@
 
                   if (ignore) {
                       toSkip[uniqueId] = true;
-                      console.log("Skipping " + locator.selectors[0]);
                   }
                 }
 
@@ -203,6 +204,7 @@
             var selectorsToTest = locator.selectors.slice(0);
             var textToCheck = step.data.text;
             var comparison = step.data.comparison || "equals";
+            selectorsToTest.unshift('[data-unique-id="' + locator.uniqueId + '"]');
             for (var i = 0; i < selectorsToTest.length; i++) {
                 var selector = selectorsToTest[i];
                 if (isImportantStep(step)) {
@@ -221,6 +223,7 @@
                         }
                     } else {
                         foundValid = true;
+                        eles.attr('data-unique-id', locator.uniqueId);
                         break;
                     }
                     break;
@@ -245,16 +248,23 @@
                 fail(result);
             }
         }
+
+        var runSpeed = utme.state.runSpeed == 'realtime' ? '1' : utme.state.runSpeed;
+        var limit = importantStepLength / utme.state.runSpeed;
         if (global.angular) {
             waitForAngular('[ng-app]', function() {
-              if (timeout > 500) {
-                  setTimeout(tryFind, timeout);
+              if (timeout >= importantStepLength) {
+                  setTimeout(tryFind, utme.state.runSpeed == 'realtime' ? timeout : Math.min(timeout * utme.state.runSpeed, limit));
               } else {
                   tryFind();
               }
             });
         } else {
-            tryFind();
+            if (timeout >= importantStepLength) {
+                setTimeout(tryFind, utme.state.runSpeed == 'realtime' ? timeout : Math.min(timeout * utme.state.runSpeed, limit));
+            } else {
+                tryFind();
+            }
         }
     }
 
@@ -366,7 +376,7 @@
             var autoRun = !name ? prompt('Would you like to step through each step (y|n)?') != 'y' : true;
             getScenario(toRun, function (scenario) {
                 scenario = JSON.parse(JSON.stringify(scenario));
-
+                utme.state.runSpeed = getParameterByName('utme_run_speed') || '10';
                 function _runScenario() {
                     state.autoRun = autoRun == true;
                     state.status = "PLAYING";
