@@ -24,6 +24,10 @@
             $.ajax({
                 jsonp: "callback",
 
+                contentType: "application/json; charset=utf-8",
+
+                crossDomain: true,
+
                 url:  serverReporter.baseUrl + "scenario/" + name,
 
                 // tell jQuery we're expecting JSONP
@@ -39,7 +43,7 @@
             $.ajax({
               type: "POST",
               url: serverReporter.baseUrl + "scenario",
-              data: JSON.stringify(scenario),
+              data: JSON.stringify(scenario, null, " "),
               dataType: 'json',
               contentType: "application/json"
             });
