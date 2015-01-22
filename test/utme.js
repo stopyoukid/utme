@@ -141,7 +141,7 @@ describe('Utme Tests', function(){
           assert.equal(utme.state.steps.length,  3);
           assert.equal(utme.state.steps[1].eventName,  'mouseenter');
           assert.equal(utme.state.steps[2].eventName,  'mouseover');
-      }); 
+      });
 
       it ('should register which button was down when click is fired', function () {
           var elements = $("<div></div>");
@@ -155,11 +155,11 @@ describe('Utme Tests', function(){
           assert.equal(utme.state.steps.length,  2);
           assert.equal(utme.state.steps[1].eventName,  'click');
           assert.equal(utme.state.steps[1].data.button,  49083);
-      }); 
+      });
 
       it ('should not register events if not recording', function () {
           utme.stopRecording(false);
-          
+
           var elements = $("<div></div>");
           elements.appendTo(document.body);
 
@@ -169,7 +169,7 @@ describe('Utme Tests', function(){
 
           assert.equal(utme.state.steps.length,  1);
           assert.equal(utme.state.steps[0].eventName,  'load');
-      }); 
+      });
 
       it ('should not register two events if in a label', function () {
           var elements = $("<label><input/><span></span></label>");
@@ -186,7 +186,42 @@ describe('Utme Tests', function(){
           assert.equal(utme.state.steps.length,  2);
           assert.equal(utme.state.steps[0].eventName,  'load');
           assert.equal(utme.state.steps[1].eventName,  'mouseenter');
-      }); 
+      });
   });
 
+  describe('run scenario', function () {
+    var singleLoadScenario = {
+      steps: [{
+        eventName: 'load',
+        data: {
+          url: {
+
+          }
+        }
+      }]
+    };
+
+    it ('run a scenario with 1 step', function () {
+        utme.runScenario('whatever', function(name, callback) {
+            callback(singleLoadScenario);
+        });
+    });
+
+    it ('log successful if completes with a single step', function () {
+      utme.registerReportHandler({
+          log: function (txt) {
+              console.log(txt);
+          },
+          error: function (txt) {
+              console.log(txt);
+          }
+      });
+
+      utme.registerLoadHandler(function (name, callback) {
+          callback(singleLoadScenario);
+      });
+      
+      utme.runScenario('whatever');
+    });
+  });
 })

@@ -52,8 +52,8 @@
             var step = scenario.steps[idx];
             var state = utme.state;
             if (step && state.status == 'PLAYING') {
-                state.runningScenario = scenario;
-                state.runningStep = idx;
+                state.run.scenario = scenario;
+                state.run.stepIndex = idx;
                 if (step.eventName == 'load') {
                     var location = step.data.url.protocol + "//" + step.data.url.host + "/";
                     var search = step.data.url.search;
@@ -76,29 +76,26 @@
                     var locator = step.data.locator;
                     var steps = scenario.steps;
                     var uniqueId = getUniqueIdFromStep(step);
-                    // var limit = importantStepLength / utme.state.runSpeed;
 
                     // try to get rid of unnecessary steps
-                    if (typeof toSkip[uniqueId] == 'undefined' && utme.state.runSpeed != 'realtime') {
+                    if (typeof toSkip[uniqueId] == 'undefined' && utme.state.run.speed != 'realtime') {
                       var diff;
                       var ignore = false;
-                      for (var j = steps.length - 1; j >= idx; j--) {
+                      for (var j = steps.length - 1; j > idx; j--) {
                         var otherStep = steps[j];
                         var otherUniqueId = getUniqueIdFromStep(otherStep);
                         if (uniqueId === otherUniqueId) {
                           if (!diff) {
                               diff = (otherStep.timeStamp - step.timeStamp);
                               ignore = !isImportantStep(otherStep) && diff < importantStepLength;
-                          } else if (isImportantStep(otherStep)) {
+                          } else if (isInteractiveStep(otherStep)) {
                               ignore = false;
                               break;
                           }
                         }
                       }
 
-                      if (ignore) {
-                          toSkip[uniqueId] = true;
-                      }
+                      toSkip[uniqueId] = ignore;
                     }
 
                     // We're skipping this element
@@ -188,7 +185,19 @@
         }
 
         function isImportantStep(step) {
-            return step.eventName != 'mouseleave' && step.eventName != 'mouseout' && step.eventName != 'blur';
+            return step.eventName != 'mouseleave' &&
+                   step.eventName != 'mouseout' &&
+                   step.eventName != 'blur';
+        }
+
+        /**
+         * Returns true if the given step is some sort of user interaction
+         */
+        function isInteractiveStep(step) {
+            return
+              otherStep.eventName.indexOf("mouse") !== 0 ||
+              otherStep.eventName.indexOf("mousedown") === 0 ||
+              otherStep.eventName.indexOf("mouseup") === 0;
         }
 
         function tryUntilFound(scenario, step, locator, callback, fail, timeout, textToCheck) {
@@ -236,7 +245,7 @@
 
                 if (foundValid) {
                     callback(eles);
-                } else if ((new Date().getTime() - started) < timeout * 5) {
+                } else if (isImportantStep(step) && (new Date().getTime() - started) < timeout * 5) {
                     setTimeout(tryFind, 50);
                 } else {
                     var result = "";
@@ -251,21 +260,24 @@
                 }
             }
 
-            var runSpeed = utme.state.runSpeed == 'realtime' ? '1' : utme.state.runSpeed;
-            var limit = importantStepLength / utme.state.runSpeed;
+            var limit = importantStepLength / (utme.state.run.speed == 'realtime' ? '1' : utme.state.run.speed);
             if (global.angular) {
                 waitForAngular('[ng-app]', function() {
-                  if (timeout >= importantStepLength) {
-                      setTimeout(tryFind, utme.state.runSpeed == 'realtime' ? timeout : Math.min(timeout * utme.state.runSpeed, limit));
-                  } else {
+                  if (utme.state.run.speed === 'realtime') {
+                      setTimeout(tryFind, timeout);
+                  } else if (utme.state.run.speed === 'fastest') {
                       tryFind();
+                  } else {
+                      setTimeout(tryFind, Math.min(timeout * utme.state.run.speed, limit));
                   }
                 });
             } else {
-                if (timeout >= importantStepLength) {
-                    setTimeout(tryFind, utme.state.runSpeed == 'realtime' ? timeout : Math.min(timeout * utme.state.runSpeed, limit));
-                } else {
+                if (utme.state.run.speed === 'realtime') {
+                    setTimeout(tryFind, timeout);
+                } else if (utme.state.run.speed === 'fastest') {
                     tryFind();
+                } else {
+                    setTimeout(tryFind, Math.min(timeout * utme.state.run.speed, limit));
                 }
             }
         }
@@ -274,10 +286,7 @@
             if (idx > 0) {
                 // If the previous step is a validate step, then just move on, and pretend it isn't there
                 // Or if it is a series of keys, then go
-
-                if (scenario.steps[idx].eventName == 'mousemove' ||
-                    scenario.steps[idx - 1].eventName.indexOf("key") >= 0 ||
-                    scenario.steps[idx - 1].eventName == 'validate') {
+                if (scenario.steps[idx - 1].eventName == 'validate') {
                     return 0;
                 }
                 return scenario.steps[idx].timeStamp - scenario.steps[idx - 1].timeStamp;
@@ -339,13 +348,24 @@
                     utme.broadcast('INITIALIZED');
                     setTimeout(function () {
                         state.autoRun = true;
-                        utme.runScenario(scenario);
+
+                        var runConfig = getParameterByName('utme_run_config');
+                        if (runConfig) {
+                            runConfig = JSON.parse(runConfig);
+                        }
+                        runConfig = runConfig || {};
+                        var speed = getParameterByName('utme_run_speed');
+                        if (speed) {
+                            runConfig.speed = speed;
+                        }
+
+                        utme.runScenario(scenario, runConfig);
                     }, 2000);
                 } else {
                     state = utme.state = utme.loadStateFromStorage();
                     utme.broadcast('INITIALIZED');
                     if (state.status === "PLAYING") {
-                        runNextStep(state.runningScenario, state.runningStep);
+                        runNextStep(state.run.scenario, state.run.stepIndex);
                     } else if (!state.status || state.status === 'INITIALIZING') {
                         state.status = "LOADED";
                     }
@@ -375,12 +395,14 @@
                     });
                 }
             },
-            runScenario: function (name) {
+            runScenario: function (name, config) {
                 var toRun = name || prompt('Scenario to run');
                 var autoRun = !name ? prompt('Would you like to step through each step (y|n)?') != 'y' : true;
                 getScenario(toRun, function (scenario) {
                     scenario = JSON.parse(JSON.stringify(scenario));
-                    utme.state.runSpeed = getParameterByName('utme_run_speed') || '10';
+                    utme.state.run = $.extend({
+                        speed: '10'
+                    }, config);
                     function _runScenario() {
                         state.autoRun = autoRun == true;
                         state.status = "PLAYING";
@@ -432,9 +454,8 @@
             },
             runNextStep: runNextStep,
             stopScenario: function (success) {
-                var scenario = state.runningScenario;
-                delete state.runningStep;
-                delete state.runningScenario;
+                var scenario = state.run.scenario;
+                delete state.run;
                 state.status = "LOADED";
                 utme.broadcast('PLAYBACK_STOPPED');
 
