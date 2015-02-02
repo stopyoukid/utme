@@ -99,6 +99,7 @@
   -webkit-box-shadow: 5px 5px 10px rgba(0,0,0,.5);
   -moz-box-shadow: 5px 5px 10px rgba(0,0,0,.5);
   -moz-border-radius: 0 0 5px 5px;
+  cursor: pointer;
 }
 
 .utme-scenario-form {
