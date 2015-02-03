@@ -122,7 +122,11 @@
 
                             if (typeof step.data.value != "undefined") {
                               ele.value = step.data.value;
-                              Simulate.event(ele, 'change');
+                              // For browsers that support the input event.
+                              if (ele.tagName.toLowerCase() === 'input') {
+                                Simulate.event(ele, 'input');
+                              }
+                              Simulate.event(ele, 'change'); // This should be fired after a blur event.
                             }
                           }
 
