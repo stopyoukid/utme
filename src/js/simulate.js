@@ -1,8 +1,4 @@
-function extend(dst, src){
-    for (var key in src)
-        dst[key] = src[key];
-    return src;
-}
+var _ = require('./utils');
 
 var Simulate = {
     event: function(element, eventName, options){
@@ -10,7 +6,7 @@ var Simulate = {
         if (document.createEvent) {
             evt = document.createEvent("HTMLEvents");
             evt.initEvent(eventName, eventName != 'mouseenter' && eventName != 'mouseleave', true );
-            extend(evt, options);
+            _.extend(evt, options);
             element.dispatchEvent(evt);
         }else{
             evt = document.createEventObject();
@@ -24,7 +20,7 @@ var Simulate = {
                 ctrlKey: false, altKey: false, shiftKey: false, metaKey: false,
                 keyCode: 0, charCode: 0
             };
-        extend(e, options);
+        _.extend(e, options);
         if (document.createEvent){
             try{
                 evt = document.createEvent('KeyEvents');
@@ -36,7 +32,7 @@ var Simulate = {
         }catch(err){
             evt = document.createEvent("Events");
         evt.initEvent(type, e.bubbles, e.cancelable);
-        extend(evt, {
+        _.extend(evt, {
             view: e.view,
           ctrlKey: e.ctrlKey, altKey: e.altKey,
           shiftKey: e.shiftKey, metaKey: e.metaKey,
@@ -103,10 +99,4 @@ for (var i = events.length; i--;){
     }(event));
 }
 
-if (typeof module !== 'undefined'){
-    module.exports = Simulate;
-}else if (typeof window !== 'undefined'){
-    window.Simulate = Simulate;
-}else if (typeof define !== 'undefined'){
-    define(function(){ return Simulate; });
-}
+module.exports = Simulate;
