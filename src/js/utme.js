@@ -1,5 +1,5 @@
 function defineUtme(global) {
-    var Promise = require("bluebird");
+    var Promise = require('es6-promise').Promise;
     var Simulate = require('./Simulate');
     var selectorFinder = require('./selectorFinder');
 
