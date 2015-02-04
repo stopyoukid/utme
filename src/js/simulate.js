@@ -1,4 +1,3 @@
-(function(){
 function extend(dst, src){
     for (var key in src)
         dst[key] = src[key];
@@ -111,5 +110,3 @@ if (typeof module !== 'undefined'){
 }else if (typeof define !== 'undefined'){
     define(function(){ return Simulate; });
 }
-
-})();

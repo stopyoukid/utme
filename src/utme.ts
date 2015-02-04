@@ -1,2 +1,2 @@
-import Selectorator = require('selectorator')
+import Selectorator = require('./selectorator')
 var mine = new Selectorator.CssSelectorGenerator();
