@@ -38,9 +38,9 @@ var ControlPanel = React.createClass({
 
     renderDefault: function () {
         return (
-            <ButtonGroup data-ignore="true">
+            <ButtonGroup data-ignore="true" bsSize="small">
                 <Button ref="recordButton" onClick={this.recordScenario} data-ignore="true">
-                    <Glyphicon glyph="record"/>
+                    <span>{ '\u2B24' }</span>
                 </Button>
                 <Button ref="runButton" onClick={this.runScenario} data-ignore="true">
                     <Glyphicon glyph="play"/>
@@ -51,7 +51,7 @@ var ControlPanel = React.createClass({
 
     renderRecorder: function () {
         return (
-            <ButtonGroup data-ignore="true">
+            <ButtonGroup data-ignore="true" bsSize="small">
                 <Button ref="stopButton" onClick={this.recordScenario} data-ignore="true">
                     <Glyphicon style={ {color: 'red'} } glyph="stop"/>
                 </Button>
@@ -67,7 +67,7 @@ var ControlPanel = React.createClass({
 
     renderPlayer: function () {
         return (
-            <ButtonGroup data-ignore="true">
+            <ButtonGroup data-ignore="true" bsSize="small">
                 <Button ref="stopButton" onClick={this.stopScenario} data-ignore="true">
                     <Glyphicon glyph="stop"/>
                 </Button>
