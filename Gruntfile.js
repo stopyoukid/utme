@@ -2,8 +2,9 @@ module.exports = function(grunt) {
 
   grunt.loadNpmTasks('grunt-contrib-uglify');
   grunt.loadNpmTasks('grunt-contrib-copy');
-  grunt.loadNpmTasks('grunt-contrib-watch');
+  //grunt.loadNpmTasks('grunt-contrib-watch');
   grunt.loadNpmTasks('grunt-contrib-concat');
+  grunt.loadNpmTasks('grunt-browserify');
 
   grunt.initConfig({
       copy: {
@@ -46,7 +47,7 @@ module.exports = function(grunt) {
             {
               src: [
                 'src/js/simulate.js',
-		'src/js/selectorFinder.js',
+		            'src/js/selectorFinder.js',
                 'src/js/utme.js',
                 'src/js/utme-ui.js',
                 'src/js/persisters/*.js',
@@ -56,6 +57,36 @@ module.exports = function(grunt) {
             }
           ]
         }
+      },
+      browserify: {
+          watch: {
+              files: {
+                  'build/js/utme.js': ['src/js/**/*.js'],
+              },
+              options: {
+                  watch: true,
+                  keepAlive: true,
+                  //transform: ['es6ify'],
+                  browserifyOptions: {
+                      debug:true
+                  }
+              }
+          },
+          build: {
+            options: {
+              //plugin:  ['tsify']
+            },
+            files: {
+              'build/js/utme.js': [
+                'src/js/simulate.js',
+                'src/js/selectorFinder.js',
+                'src/js/utme.js',
+                'src/js/utme-ui.js',
+                'src/js/persisters/*.js',
+                'src/js/reporters/*.js'
+              ]
+            }
+          }
       },
       watch: {
         options: {
@@ -73,7 +104,7 @@ module.exports = function(grunt) {
   });
 
   grunt.registerTask('default', ['watch']);
-  grunt.registerTask('build', ['concat:build', 'uglify:build', 'copy']);
-  grunt.registerTask('debugBuild', ['concat:build', 'copy']);
+  grunt.registerTask('build', ['browserify:build', 'uglify:build', 'copy']);
+  grunt.registerTask('debugBuild', ['browserify:build', 'copy']);
 
 };
