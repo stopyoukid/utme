@@ -21,42 +21,22 @@ module.exports = function(grunt) {
                 mangle: false,
                 beautify: true
             },
-            files: [
-              { src: [
-                  'src/js/simulate.js',
-		  'src/js/selectorFinder.js',
-                  'src/js/utme.js',
-                  'src/js/utme-ui.js',
-                  'src/js/persisters/*.js',
-                  'src/js/reporters/*.js'
-                ],
-                dest: 'build/js/utme.js'
-              }
-            ]
+            files: [{
+              src: ['build/js/utme.js'],
+              dest: 'build/js/utme.js'
+            }, {
+              src: ['build/js/utme-ci.js'],
+              dest: 'build/js/utme-ci.js'
+            }]
         },
         build: {
-          files: [
-            { src: [ 'build/js/utme.js'],
-              dest: 'build/js/utme.js'
-            }
-          ]
-        }
-      },
-      concat: {
-        build: {
-          files: [
-            {
-              src: [
-                'src/js/simulate.js',
-		            'src/js/selectorFinder.js',
-                'src/js/utme.js',
-                'src/js/utme-ui.js',
-                'src/js/persisters/*.js',
-                'src/js/reporters/*.js'
-              ],
-              dest: 'build/js/utme.js'
-            }
-          ]
+          files: [{
+            src: ['build/js/utme.js'],
+            dest: 'build/js/utme.js'
+          }, {
+            src: ['build/js/utme-ci.js'],
+            dest: 'build/js/utme-ci.js'
+          }]
         }
       },
       browserify: {
