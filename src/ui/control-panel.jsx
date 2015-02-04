@@ -2,6 +2,7 @@ var React = require('react');
 var bs = require('react-bootstrap');
 var ButtonGroup = bs.ButtonGroup;
 var Button = bs.Button;
+var Glyphicon = bs.Glyphicon;
 
 var CreateDialog = require('./create-dialog.jsx');
 var utme = require('../js/utme');
@@ -21,27 +22,62 @@ var ControlPanel = React.createClass({
     render: function () {
         return (
             <div class="utme-ui utme-bar" data-ignore="true">
-                <ButtonGroup data-ignore="true">
-                    <Button ref="recordButton" onClick={this.recordScenario} data-ignore="true">
-                        { utme.isRecording() || utme.isValidating() ? 'Stop Recording' : 'Record Scenario' }
-                    </Button>
-                    <Button ref="timeoutButton" onClick={this.addTimeout} data-ignore="true">
-                        Add Timeout
-                    </Button>
-                    <Button ref="validateButton" onClick={this.validate} data-ignore="true">
-                        { utme.isValidating() ? 'Done Validating' : 'Validate' }
-                    </Button>
-                    <Button ref="runButton" onClick={this.runScenario} data-ignore="true">
-                        { utme.isPlaying() ? 'Stop Running' : 'Run Scenario' }
-                    </Button>
-                    <Button ref="pauseButton" onClick={this.pauseScenario} data-ignore="true">
-                        { utme.state.autoRun ? 'Pause' : "Resume" }
-                    </Button>
-                    <Button ref="validateButton" onClick={this.step} data-ignore="true">
-                        Step
-                    </Button>
-                </ButtonGroup>
+                { this.renderButtons() }
             </div>
+        );
+    },
+
+    renderButtons: function () {
+        if (utme.isRecording()) {
+            return this.renderRecorder();
+        } else if (utme.isPlaying()) {
+            return this.renderPlayer();
+        }
+        return this.renderDefault();
+    },
+
+    renderDefault: function () {
+        return (
+            <ButtonGroup data-ignore="true">
+                <Button ref="recordButton" onClick={this.recordScenario} data-ignore="true">
+                    <Glyphicon glyph="record"/>
+                </Button>
+                <Button ref="runButton" onClick={this.runScenario} data-ignore="true">
+                    <Glyphicon glyph="play"/>
+                </Button>
+            </ButtonGroup>
+        );
+    },
+
+    renderRecorder: function () {
+        return (
+            <ButtonGroup data-ignore="true">
+                <Button ref="stopButton" onClick={this.recordScenario} data-ignore="true">
+                    <Glyphicon style={ {color: 'red'} } glyph="stop"/>
+                </Button>
+                <Button ref="timeoutButton" onClick={this.addTimeout} data-ignore="true">
+                    <Glyphicon glyph="time"/>
+                </Button>
+                <Button ref="validateButton" onClick={this.validate} data-ignore="true">
+                    <Glyphicon glyph='ok-sign' style={utme.isValidating ? { color: 'green' } : {} }/>
+                </Button>
+            </ButtonGroup>
+        );
+    },
+
+    renderPlayer: function () {
+        return (
+            <ButtonGroup data-ignore="true">
+                <Button ref="stopButton" onClick={this.stopScenario} data-ignore="true">
+                    <Glyphicon glyph="stop"/>
+                </Button>
+                <Button ref="pauseButton" onClick={this.pauseScenario} data-ignore="true">
+                    <Glyphicon glyph={utme.state.autoRun ? 'pause' : 'play'}/>
+                </Button>
+                <Button ref="stepButton" onClick={this.step} data-ignore="true" disabled={utme.isPlaying()}>
+                    <Glyphicon glyph="step-forward"/>
+                </Button>
+            </ButtonGroup>
         );
     },
 
@@ -60,8 +96,7 @@ var ControlPanel = React.createClass({
     },
 
     addTimeout: function () {
-        var oldStatus = utme.isRecording();
-        if (oldStatus) {
+        if (utme.isRecording()) {
             utme.registerEvent('timeout', {
                 amount: parseInt(prompt("How long in ms?"), 10)
             });
@@ -76,8 +111,6 @@ var ControlPanel = React.createClass({
             }
             utme.isValidating(!isValidating);
         }
-
-        updateButtonStates();
     },
 
     runScenario: function () {
@@ -94,7 +127,6 @@ var ControlPanel = React.createClass({
 
     step: function (e) {
         utme.runNextStep(utme.state.runningScenario, utme.state.runningStep);
-        return false;
     }
 
 });

@@ -9,11 +9,13 @@ module.exports = function(grunt) {
 
   grunt.initConfig({
       copy: {
-          all: {
-            files: {
-              //'build/styles/utme.css': ['src/styles/**/*.css']
-            }
-          }
+        files: {
+          expand: true,
+          flatten: true,
+          filter: 'isFile',
+          dest: 'build/fonts/',
+          src: 'bower_components/bootstrap/fonts/**'
+        }
       },
       uglify: {
         debug: {
