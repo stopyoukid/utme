@@ -8,7 +8,7 @@
   "main": "build/js/utme.js",
   "license": "MIT",
   "private": true,
-  "dependencies": {
+  "devDependencies": {
     "bootstrap": "3.3.2"
   }
 }
