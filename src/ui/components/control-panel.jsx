@@ -4,9 +4,11 @@ var ButtonGroup = bs.ButtonGroup;
 var Button = bs.Button;
 var Glyphicon = bs.Glyphicon;
 
-var CreateDialog = require('./create-dialog.jsx');
-var utme = require('../js/utme');
-var ControlPanel = React.createClass({
+var utme = require('../../js/utme');
+var createModal = require('./modals/create-modal.jsx');
+var settingsModal = require('./modals/settings-modal.jsx');
+
+module.exports = React.createClass({
 
     componentDidMount: function () {
         var self = this;
@@ -21,7 +23,7 @@ var ControlPanel = React.createClass({
 
     render: function () {
         return (
-            <div class="utme-ui utme-bar" data-ignore="true">
+            <div data-ignore="true">
                 { this.renderButtons() }
             </div>
         );
@@ -39,6 +41,9 @@ var ControlPanel = React.createClass({
     renderDefault: function () {
         return (
             <ButtonGroup data-ignore="true" bsSize="small">
+                <Button ref="settingsButton" onClick={this.showSettings} data-ignore="true">
+                    <Glyphicon glyph="cog"/>
+                </Button>
                 <Button ref="recordButton" onClick={this.recordScenario} data-ignore="true">
                     <span>{ '\u2B24' }</span>
                 </Button>
@@ -81,15 +86,22 @@ var ControlPanel = React.createClass({
         );
     },
 
+    showSettings: function () {
+        settingsModal.open();
+    },
+
     recordScenario: function () {
         if (utme.isRecording() || utme.isValidating()) {
             if (utme.isValidating()) {
                 utme.isValidating(false);
             }
-            //showScenarioForm(function(info, form) {
-            //    destroyScenarioForm();
-                utme.stopRecording(false);
-            //});
+            createModal.open().then(function(results) {
+                if (!results) {
+                    utme.stopRecording(false);
+                } else if (results.action === 'save') {
+                    utme.stopRecording(results.scenario);
+                }
+            });
         } else {
             utme.startRecording();
         }
@@ -130,12 +142,3 @@ var ControlPanel = React.createClass({
     }
 
 });
-
-module.exports = {
-    add: function (node) {
-        var container =  document.createElement('div');
-        container.className = 'utme-ui utme-bar';
-        node.appendChild(container);
-        React.render(React.createElement(ControlPanel), container);
-    }
-}

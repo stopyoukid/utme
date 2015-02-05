@@ -1,13 +1,15 @@
-
+var _ = require('./utils');
 var Promise = require('es6-promise').Promise;
 var Simulate = require('./Simulate');
 var selectorFinder = require('./selectorFinder');
+var Settings = require('./settings');
 
 // var myGenerator = new CssSelectorGenerator();
 var importantStepLength = 500;
 var saveHandlers = [];
 var reportHandlers = [];
 var loadHandlers = [];
+var settingsLoadHandlers = [];
 
 function getScenario(name) {
     return new Promise(function (resolve, reject) {
@@ -52,24 +54,34 @@ var events = [
 
 function getPreconditions (scenario) {
     var setup = scenario.setup;
+    var scenarios = setup && setup.scenarios;
     // TODO: Break out into helper
-    return Promise.all((setup && setup.scenarios) || []).map(function (scenarioName) {
-        return getScenario(scenarioName).then(function (otherScenario) {
-          otherScenario = JSON.parse(JSON.stringify(otherScenario));
-          return otherScenario.steps;
-        });
-    });
+    if (scenarios) {
+        return Promise.all(_.map(scenarios, function (scenarioName) {
+            return getScenario(scenarioName).then(function (otherScenario) {
+              otherScenario = JSON.parse(JSON.stringify(otherScenario));
+              return otherScenario.steps;
+            });
+        }));
+    } else {
+        return Promise.resolve([]);
+    }
 }
 
 function getPostconditions (scenario) {
     var cleanup = scenario.cleanup;
+    var scenarios = cleanup && cleanup.scenarios;
     // TODO: Break out into helper
-    return Promise.all((cleanup && cleanup.scenarios) || []).map(function (scenarioName) {
-        return getScenario(scenarioName).then(function (otherScenario) {
-          otherScenario = JSON.parse(JSON.stringify(otherScenario));
-          return otherScenario.steps;
-        });
-    });
+    if (scenarios) {
+        return Promise.all(_.map(scenarios, function (scenarioName) {
+            return getScenario(scenarioName).then(function (otherScenario) {
+              otherScenario = JSON.parse(JSON.stringify(otherScenario));
+              return otherScenario.steps;
+            });
+        }));
+    } else {
+        return Promise.resolve([]);
+    }
 }
 
 function _concatScenarioStepLists(steps) {
@@ -156,7 +168,6 @@ function runStep(scenario, idx, toSkip) {
             if (toSkip[getUniqueIdFromStep(step)]) {
                 runNextStep(scenario, idx, toSkip);
             } else {
-                console.log("scenario: " + scenario.name + ", step: " + idx);
                 tryUntilFound(scenario, step, locator, getTimeout(scenario, idx)).then(function (eles) {
 
                   var ele = eles[0];
@@ -400,38 +411,41 @@ var guid = (function () {
 
 var listeners = [];
 var state;
+var settings;
 var utme = {
     state: state,
     init: function () {
         var scenario = getParameterByName('utme_scenario');
-        if (scenario) {
-            localStorage.clear();
-            state = utme.state = utme.loadStateFromStorage();
-            utme.broadcast('INITIALIZED');
-            setTimeout(function () {
-                state.autoRun = true;
+        return utme.loadSettings().then(function () {
+            if (scenario) {
+                localStorage.clear();
+                state = utme.state = utme.loadStateFromStorage();
+                    utme.broadcast('INITIALIZED');
+                    setTimeout(function () {
+                        state.autoRun = true;
 
-                var runConfig = getParameterByName('utme_run_config');
-                if (runConfig) {
-                    runConfig = JSON.parse(runConfig);
-                }
-                runConfig = runConfig || {};
-                var speed = getParameterByName('utme_run_speed');
-                if (speed) {
-                    runConfig.speed = speed;
-                }
+                        var runConfig = getParameterByName('utme_run_config');
+                        if (runConfig) {
+                            runConfig = JSON.parse(runConfig);
+                        }
+                        runConfig = runConfig || {};
+                        var speed = getParameterByName('utme_run_speed');
+                        if (speed) {
+                            runConfig.speed = speed;
+                        }
 
-                utme.runScenario(scenario, runConfig);
-            }, 2000);
-        } else {
-            state = utme.state = utme.loadStateFromStorage();
-            utme.broadcast('INITIALIZED');
-            if (state.status === "PLAYING") {
-                runNextStep(state.run.scenario, state.run.stepIndex);
-            } else if (!state.status || state.status === 'INITIALIZING') {
-                state.status = "LOADED";
+                        utme.runScenario(scenario, runConfig);
+                    }, 2000);
+            } else {
+                state = utme.state = utme.loadStateFromStorage();
+                utme.broadcast('INITIALIZED');
+                if (state.status === "PLAYING") {
+                    runNextStep(state.run.scenario, state.run.stepIndex);
+                } else if (!state.status || state.status === 'INITIALIZING') {
+                    state.status = "LOADED";
+                }
             }
-        }
+        });
     },
     broadcast: function (evt, evtData) {
         if (listeners && listeners.length) {
@@ -463,7 +477,7 @@ var utme = {
         var autoRun = !name ? prompt('Would you like to step through each step (y|n)?') != 'y' : true;
         return getScenario(toRun).then(function (scenario) {
             scenario = JSON.parse(JSON.stringify(scenario));
-            utme.state.run = $.extend({
+            utme.state.run = _.extend({
                 speed: '10'
             }, config);
 
@@ -480,17 +494,18 @@ var utme = {
     },
     runNextStep: runNextStep,
     stopScenario: function (success) {
-        var scenario = state.run.scenario;
+        var scenario = state.run && state.run.scenario;
         delete state.run;
         state.status = "LOADED";
         utme.broadcast('PLAYBACK_STOPPED');
 
         utme.reportLog("Stopping Scenario");
-
-        if (success) {
-            utme.reportLog("[SUCCESS] Scenario '" + scenario.name + "' Completed!");
-        } else {
-            utme.reportError("[FAILURE] Scenario '" + scenario.name + "' Completed!");
+        if (scenario) {
+            if (success) {
+                utme.reportLog("[SUCCESS] Scenario '" + scenario.name + "' Completed!");
+            } else {
+                utme.reportError("[FAILURE] Scenario '" + scenario.name + "' Completed!");
+            }
         }
     },
 
@@ -564,6 +579,9 @@ var utme = {
     registerLoadHandler: function (handler) {
         loadHandlers.push(handler);
     },
+    registerSettingsLoadHandler: function (handler) {
+        settingsLoadHandlers.push(handler);
+    },
     isRecording: function() {
         return utme.state.status.indexOf("RECORDING") === 0;
     },
@@ -583,7 +601,7 @@ var utme = {
                 steps: state.steps
             };
 
-            $.extend(newScenario, info);
+            _.extend(newScenario, info);
 
             if (!newScenario.name) {
                 newScenario.name = prompt('Enter scenario name');
@@ -608,6 +626,22 @@ var utme = {
         utme.broadcast('RECORDING_STOPPED');
 
         utme.reportLog("Recording Stopped", newScenario);
+    },
+
+    loadSettings: function () {
+        var settings = utme.settings = new Settings();
+        if (settingsLoadHandlers.length > 0 && !getParameterByName('utme_scenario')) {
+            return new Promise(function (resolve, reject) {
+                settingsLoadHandlers[0](function (resp) {
+                    settings.setDefaults(resp);
+                    resolve();
+                }, function () {
+                    resolve();
+                });
+            });
+        } else {
+            return Promise.resolve();
+        }
     },
 
     loadStateFromStorage: function () {
@@ -803,20 +837,21 @@ function getParameterByName(name) {
 
 function bootstrapUtme() {
   if (document.readyState == "complete") {
-    utme.init();
+    utme.init().then(function () {
 
-    initEventHandlers();
+        initEventHandlers();
 
-    if (utme.isRecording()) {
-        utme.registerEvent("load", {
-            url: {
-                protocol: window.location.protocol,
-                host: window.location.host,
-                search: window.location.search,
-                hash: window.location.hash
-            }
-        });
-    }
+        if (utme.isRecording()) {
+            utme.registerEvent("load", {
+                url: {
+                    protocol: window.location.protocol,
+                    host: window.location.host,
+                    search: window.location.search,
+                    hash: window.location.hash
+                }
+            });
+        }
+    });
   }
 }
 

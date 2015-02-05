@@ -34,10 +34,10 @@ module.exports = function(grunt) {
         build: {
           files: [{
             src: ['build/js/utme.js'],
-            dest: 'build/js/utme.js'
+            dest: 'build/js/utme.min.js'
           }, {
             src: ['build/js/utme-ci.js'],
-            dest: 'build/js/utme-ci.js'
+            dest: 'build/js/utme-ci.min.js'
           }]
         }
       },
@@ -49,7 +49,6 @@ module.exports = function(grunt) {
               options: {
                   watch: true,
                   keepAlive: true,
-                  //transform: ['es6ify'],
                   browserifyOptions: {
                       debug:true
                   }
@@ -58,7 +57,6 @@ module.exports = function(grunt) {
           build: {
             options: {
               transform: ['reactify', 'es6ify']
-              //plugin:  ['tsify']
             },
             files: [{
               'build/js/utme.js': ['src/**/*.js']

@@ -1,5 +1,6 @@
 var utme = require('../js/utme');
-var ControlPanel = require('./control-panel.jsx');
+var body = require('./body');
+var ControlPanel = require('./components/control-panel.jsx');
 var utmeui = {};
 
 function toggleHighlight(ele, value) {
@@ -80,7 +81,7 @@ function initControls() {
         updateButton(stepButton, 'Step', !utme.isPlaying() || utme.state.autoRun);
     }
 
-    ControlPanel.add(document.body);
+    body.appendComponent(ControlPanel, 'utme-bar');
 }
 
 if (utme) {

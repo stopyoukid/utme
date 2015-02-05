@@ -47,12 +47,30 @@ var serverReporter = {
           dataType: 'json',
           contentType: "application/json"
         });
+    },
+
+    loadSettings: function (callback, error) {
+        $.ajax({
+            contentType: "text/plan; charset=utf-8",
+            crossDomain: true,
+            url:  serverReporter.baseUrl + "settings",
+            // tell jQuery we're expecting JSONP
+            dataType: "json",
+
+            success: function (resp) {
+                callback(resp);
+            },
+            error: function (err) {
+                error(err);
+            }
+        });
     }
 };
 
 utme.registerReportHandler(serverReporter);
 utme.registerLoadHandler(serverReporter.loadScenario);
 utme.registerSaveHandler(serverReporter.saveScenario);
+utme.registerSettingsLoadHandler(serverReporter.loadSettings);
 
 function getParameterByName(name) {
     name = name.replace(/[\[]/, "\\[").replace(/[\]]/, "\\]");
