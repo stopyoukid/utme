@@ -79,21 +79,31 @@ module.exports = function(grunt) {
         },
       },
       less: {
+        buildBootstrap: {
+          options: {
+            compress: false,
+            yuicompress: false,
+            paths: ['bower_components/bootstrap/less']
+          },
+          files: {
+            'tmp/css/bootstrap.css': ['src/ui/less/bootstrap.less']
+          }
+        },
         build: {
           options: {
             compress: true,
             yuicompress: true,
-            paths: ['bower_components/bootstrap/less']
+            paths: ['tmp/css']
           },
           files: {
-            'build/css/utme.css': ['src/ui/less/*.less']
+            'build/css/utme.css': ['src/ui/less/utme.less']
           }
         }
       }
   });
 
   grunt.registerTask('default', ['watch']);
-  grunt.registerTask('build', ['browserify:build', 'uglify:build', 'less:build', 'copy']);
+  grunt.registerTask('build', ['browserify:build', 'uglify:build', 'less:buildBootstrap', 'less:build', 'copy']);
   grunt.registerTask('debugBuild', ['browserify:build', 'copy']);
 
 };

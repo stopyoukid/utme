@@ -25975,21 +25975,7 @@ function initEventListeners() {
     }
   });
 }
-function destroyScenarioForm() {
-  var form = document.querySelectorAll('.utme-scenario-form')[0];
-  var overlay = document.querySelectorAll('.utme-scenario-form-background')[0];
-  form.parentNode.removeChild(form);
-  overlay.parentNode.removeChild(overlay);
-}
 function initControls() {
-  function updateButtonStates() {
-    updateButton(recordButton, utme.isRecording() || utme.isValidating() ? 'Stop Recording' : 'Record Scenario', utme.isPlaying());
-    updateButton(runButton, utme.isPlaying() ? 'Stop Running' : 'Run Scenario', utme.isValidating() || utme.isRecording());
-    updateButton(validateButton, utme.isValidating() ? 'Done Validating' : 'Validate', !(utme.isRecording() || utme.isValidating()));
-    updateButton(timeoutButton, 'Add Timeout', !utme.isRecording());
-    updateButton(pauseButton, utme.state.autoRun ? 'Pause' : "Resume", !utme.isPlaying());
-    updateButton(stepButton, 'Step', !utme.isPlaying() || utme.state.autoRun);
-  }
   body.appendComponent(ControlPanel, 'utme-bar');
 }
 if (utme) {
