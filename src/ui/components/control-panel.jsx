@@ -61,11 +61,11 @@ module.exports = React.createClass({
     renderRecorder: function () {
         return (
             <ButtonGroup data-ignore="true" bsSize="small">
-                <Button ref="stopButton" onClick={this.recordScenario} data-ignore="true">
-                    <Glyphicon style={ {color: 'red'} } glyph="stop"/>
-                </Button>
                 <Button ref="timeoutButton" onClick={this.addTimeout} data-ignore="true">
                     <Glyphicon glyph="time"/>
+                </Button>
+                <Button ref="stopButton" onClick={this.recordScenario} data-ignore="true">
+                    <Glyphicon style={ {color: 'red'} } glyph="stop"/>
                 </Button>
                 <Button ref="validateButton" onClick={this.validate} data-ignore="true">
                     <Glyphicon glyph='ok-sign' style={this.props.utme.isValidating() ? { color: 'green' } : {} }/>

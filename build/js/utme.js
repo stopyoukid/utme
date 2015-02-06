@@ -25690,11 +25690,11 @@ module.exports = React.createClass({displayName: "exports",
     renderRecorder: function () {
         return (
             React.createElement(ButtonGroup, {"data-ignore": "true", bsSize: "small"}, 
-                React.createElement(Button, {ref: "stopButton", onClick: this.recordScenario, "data-ignore": "true"}, 
-                    React.createElement(Glyphicon, {style:  {color: 'red'}, glyph: "stop"})
-                ), 
                 React.createElement(Button, {ref: "timeoutButton", onClick: this.addTimeout, "data-ignore": "true"}, 
                     React.createElement(Glyphicon, {glyph: "time"})
+                ), 
+                React.createElement(Button, {ref: "stopButton", onClick: this.recordScenario, "data-ignore": "true"}, 
+                    React.createElement(Glyphicon, {style:  {color: 'red'}, glyph: "stop"})
                 ), 
                 React.createElement(Button, {ref: "validateButton", onClick: this.validate, "data-ignore": "true"}, 
                     React.createElement(Glyphicon, {glyph: "ok-sign", style: this.props.utme.isValidating() ? { color: 'green' } : {}})
