@@ -63,7 +63,7 @@ function initEventListeners() {
 }
 
 function initControls() {
-    body.appendComponent(ControlPanel, 'utme-bar');
+    body.appendComponent(ControlPanel, { utme: utme }, 'utme-bar');
 }
 
 if (utme) {

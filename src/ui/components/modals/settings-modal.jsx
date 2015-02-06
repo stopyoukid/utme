@@ -8,7 +8,12 @@ var Input = bs.Input;
 var modalLauncher = require('./modal-launcher.jsx');
 var utme = require('../../../js/utme');
 
-var CreateModal = React.createClass({
+var SettingsModal = React.createClass({
+
+    propTypes: {
+        settings: React.PropTypes.object.isRequired
+    },
+
     render: function () {
         return (
             <Modal title="Settings" onRequestHide={this.props.onClose} className="utme-settings">
@@ -39,8 +44,8 @@ var CreateModal = React.createClass({
                     </form>
                 </div>
                 <div className="modal-footer">
-                    <Button className="pull-left" ref="resetDefaultsButton" onClick={this.resetDefaults}>Reset Defaults</Button>
-                    <Button ref="saveButton" onClick={this.props.onClose}>Close</Button>
+                    <Button className="pull-left" onClick={this.resetDefaults}>Reset Defaults</Button>
+                    <Button onClick={this.props.onClose}>Close</Button>
                 </div>
             </Modal>
         );
@@ -49,22 +54,26 @@ var CreateModal = React.createClass({
     renderSetting: function (type, label, settingKey) {
         var self = this;
         if (type === 'checkbox' || type === 'radio') {
-            return (<Input type={type} label={label} checked={utme.settings.get(settingKey)} onChange={
+            return (<Input type={type} label={label} checked={this.props.settings.get(settingKey)} onChange={
                 function (e) { self.updateSetting(settingKey, e.target.checked); }
             }/>);
         } else {
-            return (<Input type={type} label={label} value={utme.settings.get(settingKey)} onChange={
+            return (<Input type={type} label={label} value={this.props.settings.get(settingKey)} onChange={
                 function (e) { self.updateSetting(settingKey, e.target.value); }
             }/>);
         }
     },
 
     updateSetting: function (key, value) {
-        utme.settings.set(key, value);
-        utme.settings.save();
+        this.props.settings.set(key, value);
+        this.forceUpdate();
+    },
+
+    resetDefaults: function () {
+        this.props.settings.resetDefaults();
         this.forceUpdate();
     }
 
 });
 
-module.exports = modalLauncher(CreateModal);
+module.exports = modalLauncher(SettingsModal);

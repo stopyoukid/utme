@@ -24707,8 +24707,8 @@ module.exports = unique;
 "use strict";
 var _ = require('./utils');
 var local_storage_key = 'utme-settings';
-function Settings() {
-  this.load();
+function Settings(defaultSettings) {
+  this.setDefaults(defaultSettings || {});
 }
 Settings.prototype = {
   readSettingsFromLocalStorage: function() {
@@ -24721,10 +24721,13 @@ Settings.prototype = {
   },
   setDefaults: function(defaultSettings) {
     var localSettings = this.readSettingsFromLocalStorage();
-    this.settings = _.extend({}, _.extend(defaultSettings || {}, localSettings));
+    var defaultsCopy = _.extend({}, defaultSettings || {});
+    this.settings = _.extend({}, _.extend(defaultsCopy, localSettings));
+    this.defaultSettings = defaultSettings;
   },
   set: function(key, value) {
     this.settings[key] = value;
+    this.save();
   },
   get: function(key) {
     return this.settings[key];
@@ -24732,8 +24735,12 @@ Settings.prototype = {
   save: function() {
     localStorage.setItem(local_storage_key, JSON.stringify(this.settings));
   },
-  load: function() {
-    this.settings = this.readSettingsFromLocalStorage();
+  resetDefaults: function() {
+    var defaults = this.defaultSettings;
+    if (defaults) {
+      this.settings = _.extend({}, defaults);
+      this.save();
+    }
   }
 };
 module.exports = Settings;
@@ -24826,6 +24833,23 @@ module.exports = Simulate;
 
 },{"./utils":216}],216:[function(require,module,exports){
 "use strict";
+(function() {
+  var Ap = Array.prototype;
+  var slice = Ap.slice;
+  var Fp = Function.prototype;
+  if (!Fp.bind) {
+    Fp.bind = function(context) {
+      var func = this;
+      var args = slice.call(arguments, 1);
+      function bound() {
+        var invokedAsConstructor = func.prototype && (this instanceof func);
+        return func.apply(!invokedAsConstructor && context || this, args.concat(slice.call(arguments)));
+      }
+      bound.prototype = func.prototype;
+      return bound;
+    };
+  }
+})();
 module.exports = {
   extend: function extend(dst, src) {
     if (src) {
@@ -24955,7 +24979,6 @@ function runStep(scenario, idx, toSkip) {
         search += (search ? "&" : "?") + "utme_test_server=" + testServer;
       }
       window.location.replace(location + search + hash);
-      window.location.reload(true);
     } else if (step.eventName == 'timeout') {
       if (state.autoRun) {
         runNextStep(scenario, idx, toSkip, step.data.amount);
@@ -25588,8 +25611,8 @@ module.exports = {
     });
     return reactElement;
   },
-  appendComponent: function(reactComponent, className) {
-    return this.append(React.createElement(reactComponent), className);
+  appendComponent: function(reactComponent, props, className) {
+    return this.append(React.createElement(reactComponent, props), className);
   },
   remove: function(reactElement) {
     var container = findElementContainer(reactElement);
@@ -25610,15 +25633,18 @@ var ButtonGroup = bs.ButtonGroup;
 var Button = bs.Button;
 var Glyphicon = bs.Glyphicon;
 
-var utme = require('../../js/utme');
 var createModal = require('./modals/create-modal.jsx');
 var settingsModal = require('./modals/settings-modal.jsx');
 
 module.exports = React.createClass({displayName: "exports",
 
+    propTypes: {
+        utme: React.PropTypes.object.isRequired
+    },
+
     componentDidMount: function () {
         var self = this;
-        utme.registerListener(function(eventName) {
+        this.props.utme.registerListener(function(eventName) {
             self.forceUpdate();
         });
     },
@@ -25636,6 +25662,7 @@ module.exports = React.createClass({displayName: "exports",
     },
 
     renderButtons: function () {
+        var utme = this.props.utme;
         if (utme.isRecording()) {
             return this.renderRecorder();
         } else if (utme.isPlaying()) {
@@ -25670,7 +25697,7 @@ module.exports = React.createClass({displayName: "exports",
                     React.createElement(Glyphicon, {glyph: "time"})
                 ), 
                 React.createElement(Button, {ref: "validateButton", onClick: this.validate, "data-ignore": "true"}, 
-                    React.createElement(Glyphicon, {glyph: "ok-sign", style: utme.isValidating ? { color: 'green' } : {}})
+                    React.createElement(Glyphicon, {glyph: "ok-sign", style: this.props.utme.isValidating() ? { color: 'green' } : {}})
                 )
             )
         );
@@ -25683,9 +25710,9 @@ module.exports = React.createClass({displayName: "exports",
                     React.createElement(Glyphicon, {glyph: "stop"})
                 ), 
                 React.createElement(Button, {ref: "pauseButton", onClick: this.pauseScenario, "data-ignore": "true"}, 
-                    React.createElement(Glyphicon, {glyph: utme.state.autoRun ? 'pause' : 'play'})
+                    React.createElement(Glyphicon, {glyph: this.props.utme.state.autoRun ? 'pause' : 'play'})
                 ), 
-                React.createElement(Button, {ref: "stepButton", onClick: this.step, "data-ignore": "true", disabled: utme.isPlaying()}, 
+                React.createElement(Button, {ref: "stepButton", onClick: this.step, "data-ignore": "true", disabled: this.props.utme.isPlaying()}, 
                     React.createElement(Glyphicon, {glyph: "step-forward"})
                 )
             )
@@ -25693,10 +25720,11 @@ module.exports = React.createClass({displayName: "exports",
     },
 
     showSettings: function () {
-        settingsModal.open();
+        settingsModal.open({ settings: this.props.utme.settings });
     },
 
     recordScenario: function () {
+        var utme = this.props.utme;
         if (utme.isRecording() || utme.isValidating()) {
             if (utme.isValidating()) {
                 utme.isValidating(false);
@@ -25714,6 +25742,7 @@ module.exports = React.createClass({displayName: "exports",
     },
 
     addTimeout: function () {
+        var utme = this.props.utme;
         if (utme.isRecording()) {
             utme.registerEvent('timeout', {
                 amount: parseInt(prompt("How long in ms?"), 10)
@@ -25722,6 +25751,7 @@ module.exports = React.createClass({displayName: "exports",
     },
 
     validate: function () {
+        var utme = this.props.utme;
         var isValidating = utme.isValidating();
         if (utme.isRecording() || isValidating) {
             if (isValidating) {
@@ -25732,6 +25762,7 @@ module.exports = React.createClass({displayName: "exports",
     },
 
     runScenario: function () {
+        var utme = this.props.utme;
         if (!(utme.isRecording() || utme.isPlaying() || utme.isValidating())) {
             utme.runScenario();
         } else {
@@ -25740,16 +25771,18 @@ module.exports = React.createClass({displayName: "exports",
     },
 
     pauseScenario: function (e) {
+        var utme = this.props.utme;
         utme.state.autoRun = !utme.state.autoRun;
     },
 
     step: function (e) {
+        var utme = this.props.utme;
         utme.runNextStep(utme.state.runningScenario, utme.state.runningStep);
     }
 
 });
 
-},{"../../js/utme":217,"./modals/create-modal.jsx":220,"./modals/settings-modal.jsx":222,"react":208,"react-bootstrap":52}],220:[function(require,module,exports){
+},{"./modals/create-modal.jsx":220,"./modals/settings-modal.jsx":222,"react":208,"react-bootstrap":52}],220:[function(require,module,exports){
 var React = require('react');
 var bs = require('react-bootstrap');
 var Modal = bs.Modal;
@@ -25818,25 +25851,24 @@ var CreateModal = React.createClass({displayName: "CreateModal",
 module.exports = modalLauncher(CreateModal);
 
 },{"./modal-launcher.jsx":221,"react":208,"react-bootstrap":52}],221:[function(require,module,exports){
-var React = require('react');
-var bs = require('react-bootstrap');
+var _ = require('../../../js/utils');
 var Promise = require('es6-promise').Promise;
 var body = require('../../body');
 
 module.exports = function (modalComponent) {
     return {
-        open: function () {
+        open: function (params) {
             return new Promise(function (resolve, reject) {
-                var element = body.append(React.createElement(modalComponent, {
+                var element = body.appendComponent(modalComponent, _.extend({
 
                     onClose: function (results) {
                         setTimeout(function () {
                             body.remove(element);
                             resolve(results);
                         });
-                    },
+                    }
 
-                }));
+                }, params));
             })['catch'](function (e) {
                 throw e;
             });
@@ -25845,7 +25877,7 @@ module.exports = function (modalComponent) {
 
 };
 
-},{"../../body":218,"es6-promise":1,"react":208,"react-bootstrap":52}],222:[function(require,module,exports){
+},{"../../../js/utils":216,"../../body":218,"es6-promise":1}],222:[function(require,module,exports){
 var React = require('react');
 var bs = require('react-bootstrap');
 var Modal = bs.Modal;
@@ -25856,7 +25888,12 @@ var Input = bs.Input;
 var modalLauncher = require('./modal-launcher.jsx');
 var utme = require('../../../js/utme');
 
-var CreateModal = React.createClass({displayName: "CreateModal",
+var SettingsModal = React.createClass({displayName: "SettingsModal",
+
+    propTypes: {
+        settings: React.PropTypes.object.isRequired
+    },
+
     render: function () {
         return (
             React.createElement(Modal, {title: "Settings", onRequestHide: this.props.onClose, className: "utme-settings"}, 
@@ -25887,8 +25924,8 @@ var CreateModal = React.createClass({displayName: "CreateModal",
                     )
                 ), 
                 React.createElement("div", {className: "modal-footer"}, 
-                    React.createElement(Button, {className: "pull-left", ref: "resetDefaultsButton", onClick: this.resetDefaults}, "Reset Defaults"), 
-                    React.createElement(Button, {ref: "saveButton", onClick: this.props.onClose}, "Close")
+                    React.createElement(Button, {className: "pull-left", onClick: this.resetDefaults}, "Reset Defaults"), 
+                    React.createElement(Button, {onClick: this.props.onClose}, "Close")
                 )
             )
         );
@@ -25897,25 +25934,29 @@ var CreateModal = React.createClass({displayName: "CreateModal",
     renderSetting: function (type, label, settingKey) {
         var self = this;
         if (type === 'checkbox' || type === 'radio') {
-            return (React.createElement(Input, {type: type, label: label, checked: utme.settings.get(settingKey), onChange: 
+            return (React.createElement(Input, {type: type, label: label, checked: this.props.settings.get(settingKey), onChange: 
                 function (e) { self.updateSetting(settingKey, e.target.checked); }
             }));
         } else {
-            return (React.createElement(Input, {type: type, label: label, value: utme.settings.get(settingKey), onChange: 
+            return (React.createElement(Input, {type: type, label: label, value: this.props.settings.get(settingKey), onChange: 
                 function (e) { self.updateSetting(settingKey, e.target.value); }
             }));
         }
     },
 
     updateSetting: function (key, value) {
-        utme.settings.set(key, value);
-        utme.settings.save();
+        this.props.settings.set(key, value);
+        this.forceUpdate();
+    },
+
+    resetDefaults: function () {
+        this.props.settings.resetDefaults();
         this.forceUpdate();
     }
 
 });
 
-module.exports = modalLauncher(CreateModal);
+module.exports = modalLauncher(SettingsModal);
 
 
 },{"../../../js/utme":217,"./modal-launcher.jsx":221,"react":208,"react-bootstrap":52}],223:[function(require,module,exports){
@@ -25976,7 +26017,7 @@ function initEventListeners() {
   });
 }
 function initControls() {
-  body.appendComponent(ControlPanel, 'utme-bar');
+  body.appendComponent(ControlPanel, {utme: utme}, 'utme-bar');
 }
 if (utme) {
   if (!utme.state || utme.state.status != 'INITIALIZED') {

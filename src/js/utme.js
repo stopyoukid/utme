@@ -133,7 +133,6 @@ function runStep(scenario, idx, toSkip) {
                 search += (search ? "&" : "?") + "utme_test_server=" + testServer;
             }
             window.location.replace(location + search + hash);
-            window.location.reload(true);
         } else if (step.eventName == 'timeout') {
             if (state.autoRun) {
                 runNextStep(scenario, idx, toSkip, step.data.amount);

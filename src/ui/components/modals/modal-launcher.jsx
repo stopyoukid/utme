@@ -1,22 +1,21 @@
-var React = require('react');
-var bs = require('react-bootstrap');
+var _ = require('../../../js/utils');
 var Promise = require('es6-promise').Promise;
 var body = require('../../body');
 
 module.exports = function (modalComponent) {
     return {
-        open: function () {
+        open: function (params) {
             return new Promise(function (resolve, reject) {
-                var element = body.append(React.createElement(modalComponent, {
+                var element = body.appendComponent(modalComponent, _.extend({
 
                     onClose: function (results) {
                         setTimeout(function () {
                             body.remove(element);
                             resolve(results);
                         });
-                    },
+                    }
 
-                }));
+                }, params));
             })['catch'](function (e) {
                 throw e;
             });

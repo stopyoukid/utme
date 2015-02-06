@@ -1462,8 +1462,8 @@ module.exports = unique;
 "use strict";
 var _ = require('./utils');
 var local_storage_key = 'utme-settings';
-function Settings() {
-  this.load();
+function Settings(defaultSettings) {
+  this.setDefaults(defaultSettings || {});
 }
 Settings.prototype = {
   readSettingsFromLocalStorage: function() {
@@ -1476,10 +1476,13 @@ Settings.prototype = {
   },
   setDefaults: function(defaultSettings) {
     var localSettings = this.readSettingsFromLocalStorage();
-    this.settings = _.extend({}, _.extend(defaultSettings || {}, localSettings));
+    var defaultsCopy = _.extend({}, defaultSettings || {});
+    this.settings = _.extend({}, _.extend(defaultsCopy, localSettings));
+    this.defaultSettings = defaultSettings;
   },
   set: function(key, value) {
     this.settings[key] = value;
+    this.save();
   },
   get: function(key) {
     return this.settings[key];
@@ -1487,8 +1490,12 @@ Settings.prototype = {
   save: function() {
     localStorage.setItem(local_storage_key, JSON.stringify(this.settings));
   },
-  load: function() {
-    this.settings = this.readSettingsFromLocalStorage();
+  resetDefaults: function() {
+    var defaults = this.defaultSettings;
+    if (defaults) {
+      this.settings = _.extend({}, defaults);
+      this.save();
+    }
   }
 };
 module.exports = Settings;
@@ -1581,6 +1588,23 @@ module.exports = Simulate;
 
 },{"./utils":10}],10:[function(require,module,exports){
 "use strict";
+(function() {
+  var Ap = Array.prototype;
+  var slice = Ap.slice;
+  var Fp = Function.prototype;
+  if (!Fp.bind) {
+    Fp.bind = function(context) {
+      var func = this;
+      var args = slice.call(arguments, 1);
+      function bound() {
+        var invokedAsConstructor = func.prototype && (this instanceof func);
+        return func.apply(!invokedAsConstructor && context || this, args.concat(slice.call(arguments)));
+      }
+      bound.prototype = func.prototype;
+      return bound;
+    };
+  }
+})();
 module.exports = {
   extend: function extend(dst, src) {
     if (src) {
@@ -1710,7 +1734,6 @@ function runStep(scenario, idx, toSkip) {
         search += (search ? "&" : "?") + "utme_test_server=" + testServer;
       }
       window.location.replace(location + search + hash);
-      window.location.reload(true);
     } else if (step.eventName == 'timeout') {
       if (state.autoRun) {
         runNextStep(scenario, idx, toSkip, step.data.amount);

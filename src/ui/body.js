@@ -24,8 +24,8 @@ module.exports = {
         return reactElement;
     },
 
-    appendComponent: function (reactComponent, className) {
-        return this.append(React.createElement(reactComponent), className);
+    appendComponent: function (reactComponent, props, className) {
+        return this.append(React.createElement(reactComponent, props), className);
     },
 
     remove: function (reactElement) {

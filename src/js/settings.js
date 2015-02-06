@@ -1,8 +1,8 @@
 var _ = require('./utils');
 var local_storage_key = 'utme-settings';
 
-function Settings () {
-    this.load();
+function Settings (defaultSettings) {
+    this.setDefaults(defaultSettings || {});
 }
 
 Settings.prototype = {
@@ -17,11 +17,14 @@ Settings.prototype = {
 
     setDefaults: function (defaultSettings) {
         var localSettings = this.readSettingsFromLocalStorage();
-        this.settings = _.extend({}, _.extend(defaultSettings || {}, localSettings));
+        var defaultsCopy = _.extend({}, defaultSettings || {});
+        this.settings = _.extend({}, _.extend(defaultsCopy, localSettings));
+        this.defaultSettings = defaultSettings;
     },
 
     set: function (key, value) {
         this.settings[key] = value;
+        this.save();
     },
 
     get: function (key) {
@@ -32,8 +35,12 @@ Settings.prototype = {
         localStorage.setItem(local_storage_key, JSON.stringify(this.settings));
     },
 
-    load: function () {
-        this.settings = this.readSettingsFromLocalStorage();
+    resetDefaults: function () {
+        var defaults = this.defaultSettings;
+        if (defaults) {
+            this.settings = _.extend({}, defaults);
+            this.save();
+        }
     }
 };
 

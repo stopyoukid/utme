@@ -4,15 +4,18 @@ var ButtonGroup = bs.ButtonGroup;
 var Button = bs.Button;
 var Glyphicon = bs.Glyphicon;
 
-var utme = require('../../js/utme');
 var createModal = require('./modals/create-modal.jsx');
 var settingsModal = require('./modals/settings-modal.jsx');
 
 module.exports = React.createClass({
 
+    propTypes: {
+        utme: React.PropTypes.object.isRequired
+    },
+
     componentDidMount: function () {
         var self = this;
-        utme.registerListener(function(eventName) {
+        this.props.utme.registerListener(function(eventName) {
             self.forceUpdate();
         });
     },
@@ -30,6 +33,7 @@ module.exports = React.createClass({
     },
 
     renderButtons: function () {
+        var utme = this.props.utme;
         if (utme.isRecording()) {
             return this.renderRecorder();
         } else if (utme.isPlaying()) {
@@ -64,7 +68,7 @@ module.exports = React.createClass({
                     <Glyphicon glyph="time"/>
                 </Button>
                 <Button ref="validateButton" onClick={this.validate} data-ignore="true">
-                    <Glyphicon glyph='ok-sign' style={utme.isValidating ? { color: 'green' } : {} }/>
+                    <Glyphicon glyph='ok-sign' style={this.props.utme.isValidating() ? { color: 'green' } : {} }/>
                 </Button>
             </ButtonGroup>
         );
@@ -77,9 +81,9 @@ module.exports = React.createClass({
                     <Glyphicon glyph="stop"/>
                 </Button>
                 <Button ref="pauseButton" onClick={this.pauseScenario} data-ignore="true">
-                    <Glyphicon glyph={utme.state.autoRun ? 'pause' : 'play'}/>
+                    <Glyphicon glyph={this.props.utme.state.autoRun ? 'pause' : 'play'}/>
                 </Button>
-                <Button ref="stepButton" onClick={this.step} data-ignore="true" disabled={utme.isPlaying()}>
+                <Button ref="stepButton" onClick={this.step} data-ignore="true" disabled={this.props.utme.isPlaying()}>
                     <Glyphicon glyph="step-forward"/>
                 </Button>
             </ButtonGroup>
@@ -87,10 +91,11 @@ module.exports = React.createClass({
     },
 
     showSettings: function () {
-        settingsModal.open();
+        settingsModal.open({ settings: this.props.utme.settings });
     },
 
     recordScenario: function () {
+        var utme = this.props.utme;
         if (utme.isRecording() || utme.isValidating()) {
             if (utme.isValidating()) {
                 utme.isValidating(false);
@@ -108,6 +113,7 @@ module.exports = React.createClass({
     },
 
     addTimeout: function () {
+        var utme = this.props.utme;
         if (utme.isRecording()) {
             utme.registerEvent('timeout', {
                 amount: parseInt(prompt("How long in ms?"), 10)
@@ -116,6 +122,7 @@ module.exports = React.createClass({
     },
 
     validate: function () {
+        var utme = this.props.utme;
         var isValidating = utme.isValidating();
         if (utme.isRecording() || isValidating) {
             if (isValidating) {
@@ -126,6 +133,7 @@ module.exports = React.createClass({
     },
 
     runScenario: function () {
+        var utme = this.props.utme;
         if (!(utme.isRecording() || utme.isPlaying() || utme.isValidating())) {
             utme.runScenario();
         } else {
@@ -134,10 +142,12 @@ module.exports = React.createClass({
     },
 
     pauseScenario: function (e) {
+        var utme = this.props.utme;
         utme.state.autoRun = !utme.state.autoRun;
     },
 
     step: function (e) {
+        var utme = this.props.utme;
         utme.runNextStep(utme.state.runningScenario, utme.state.runningStep);
     }
 
