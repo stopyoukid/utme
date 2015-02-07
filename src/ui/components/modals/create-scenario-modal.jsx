@@ -10,7 +10,7 @@ var CreateModal = React.createClass({
         return (
             <Modal title="Save Scenario Recording" onRequestHide={function () {}} className="utme-create-modal" data-ignore="true">
                 <div className="modal-body" data-ignore="true">
-                    <form data-ignore="true">
+                    <form data-ignore="true" ref="form">
                         <Input type="text" label="Scenario Name" ref="scenarioName" data-ignore="true"/>
                         <Input type="text" label="Description (Optional):" ref="description" data-ignore="true"/>
                         <Input type="text" label="Setup Scenarios (Optional, Newline separated):" ref="setupScenarios" data-ignore="true"/>
@@ -31,19 +31,14 @@ var CreateModal = React.createClass({
     },
 
     saveScenario: function (e) {
-        var scenarioName = this.refs.scenarioName.value;
-        var description = this.refs.description.value;
-        var setup = this.refs.setupScenarios.value;
-        var cleanup = this.refs.cleanupScenarios.value;
+        var form = this.refs.form;
+        var setup = this.refs.setupScenarios.getValue();
+        var cleanup = this.refs.cleanupScenarios.getValue();
 
-        var info = {};
-        if (name) {
-            info.name = name;
-        }
-
-        if (description) {
-            info.description = description;
-        }
+        var info = {
+            name: this.refs.scenarioName.getValue(),
+            description: this.refs.description.getValue()
+        };
 
         if (setup) {
             info.setup = {

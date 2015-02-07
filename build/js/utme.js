@@ -24350,11 +24350,11 @@ for (var i = events.length; i--; ) {
 module.exports = Simulate;
 
 
-},{"./utils":216}],210:[function(require,module,exports){
+},{"./utils":215}],210:[function(require,module,exports){
 (function (global){
 module.exports = function() {
   "use strict";
-  var saveAs = saveAs || (typeof navigator !== "undefined" && navigator.msSaveOrOpenBlob && navigator.msSaveOrOpenBlob.bind(navigator)) || (function(view) {
+  var saveAs = module.exports = saveAs || (typeof navigator !== "undefined" && navigator.msSaveOrOpenBlob && navigator.msSaveOrOpenBlob.bind(navigator)) || (function(view) {
     "use strict";
     if (typeof navigator !== "undefined" && /MSIE [1-9]\./.test(navigator.userAgent)) {
       return;
@@ -24534,13 +24534,7 @@ module.exports = function() {
     FS_proto.error = FS_proto.onwritestart = FS_proto.onprogress = FS_proto.onwrite = FS_proto.onabort = FS_proto.onerror = FS_proto.onwriteend = null;
     return saveAs;
   }(typeof self !== "undefined" && self || typeof window !== "undefined" && window || this.content));
-  if (typeof module !== "undefined" && module !== null) {
-    module.exports = saveAs;
-  } else if ((typeof define !== "undefined" && define !== null) && (define.amd != null)) {
-    define([], function() {
-      return saveAs;
-    });
-  }
+  module.exports = saveAs;
   return {};
 }.call(typeof global !== 'undefined' ? global : this);
 
@@ -24556,7 +24550,7 @@ utme.registerSaveHandler(function(scenario, utme) {
 });
 
 
-},{"../utme":217,"./FileSaver":210}],212:[function(require,module,exports){
+},{"../utme":216,"./FileSaver":210}],212:[function(require,module,exports){
 "use strict";
 var utme = require('../utme.js');
 var serverReporter = {
@@ -24627,7 +24621,7 @@ function getParameterByName(name) {
 }
 
 
-},{"../utme.js":217}],213:[function(require,module,exports){
+},{"../utme.js":216}],213:[function(require,module,exports){
 "use strict";
 function unique(el, doc) {
   if (!el || !el.tagName) {
@@ -24746,92 +24740,7 @@ Settings.prototype = {
 module.exports = Settings;
 
 
-},{"./utils":216}],215:[function(require,module,exports){
-"use strict";
-var _ = require('./utils');
-var Simulate = {
-  event: function(element, eventName, options) {
-    var evt;
-    if (document.createEvent) {
-      evt = document.createEvent("HTMLEvents");
-      evt.initEvent(eventName, eventName != 'mouseenter' && eventName != 'mouseleave', true);
-      _.extend(evt, options);
-      element.dispatchEvent(evt);
-    } else {
-      evt = document.createEventObject();
-      element.fireEvent('on' + eventName, evt);
-    }
-  },
-  keyEvent: function(element, type, options) {
-    var evt,
-        e = {
-          bubbles: true,
-          cancelable: true,
-          view: window,
-          ctrlKey: false,
-          altKey: false,
-          shiftKey: false,
-          metaKey: false,
-          keyCode: 0,
-          charCode: 0
-        };
-    _.extend(e, options);
-    if (document.createEvent) {
-      try {
-        evt = document.createEvent('KeyEvents');
-        evt.initKeyEvent(type, e.bubbles, e.cancelable, e.view, e.ctrlKey, e.altKey, e.shiftKey, e.metaKey, e.keyCode, e.charCode);
-        element.dispatchEvent(evt);
-      } catch (err) {
-        evt = document.createEvent("Events");
-        evt.initEvent(type, e.bubbles, e.cancelable);
-        _.extend(evt, {
-          view: e.view,
-          ctrlKey: e.ctrlKey,
-          altKey: e.altKey,
-          shiftKey: e.shiftKey,
-          metaKey: e.metaKey,
-          keyCode: e.keyCode,
-          charCode: e.charCode
-        });
-        element.dispatchEvent(evt);
-      }
-    }
-  }
-};
-Simulate.keypress = function(element, chr) {
-  var charCode = chr.charCodeAt(0);
-  this.keyEvent(element, 'keypress', {
-    keyCode: charCode,
-    charCode: charCode
-  });
-};
-Simulate.keydown = function(element, chr) {
-  var charCode = chr.charCodeAt(0);
-  this.keyEvent(element, 'keydown', {
-    keyCode: charCode,
-    charCode: charCode
-  });
-};
-Simulate.keyup = function(element, chr) {
-  var charCode = chr.charCodeAt(0);
-  this.keyEvent(element, 'keyup', {
-    keyCode: charCode,
-    charCode: charCode
-  });
-};
-var events = ['click', 'focus', 'blur', 'dblclick', 'input', 'change', 'mousedown', 'mousemove', 'mouseout', 'mouseover', 'mouseup', 'mouseenter', 'mouseleave', 'resize', 'scroll', 'select', 'submit', 'load', 'unload'];
-for (var i = events.length; i--; ) {
-  var event = events[i];
-  Simulate[event] = (function(evt) {
-    return function(element, options) {
-      this.event(element, evt, options);
-    };
-  }(event));
-}
-module.exports = Simulate;
-
-
-},{"./utils":216}],216:[function(require,module,exports){
+},{"./utils":215}],215:[function(require,module,exports){
 "use strict";
 (function() {
   var Ap = Array.prototype;
@@ -24877,7 +24786,7 @@ module.exports = {
 };
 
 
-},{}],217:[function(require,module,exports){
+},{}],216:[function(require,module,exports){
 (function (global){
 "use strict";
 var _ = require('./utils');
@@ -25587,7 +25496,7 @@ module.exports = utme;
 
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./Simulate":209,"./selectorFinder":213,"./settings":214,"./utils":216,"es6-promise":1}],218:[function(require,module,exports){
+},{"./Simulate":209,"./selectorFinder":213,"./settings":214,"./utils":215,"es6-promise":1}],217:[function(require,module,exports){
 "use strict";
 var React = require('react');
 var containers = [];
@@ -25626,14 +25535,14 @@ module.exports = {
 };
 
 
-},{"react":208}],219:[function(require,module,exports){
+},{"react":208}],218:[function(require,module,exports){
 var React = require('react');
 var bs = require('react-bootstrap');
 var ButtonGroup = bs.ButtonGroup;
 var Button = bs.Button;
 var Glyphicon = bs.Glyphicon;
 
-var createModal = require('./modals/create-modal.jsx');
+var createScenarioModal = require('./modals/create-scenario-modal.jsx');
 var settingsModal = require('./modals/settings-modal.jsx');
 
 module.exports = React.createClass({displayName: "exports",
@@ -25729,7 +25638,7 @@ module.exports = React.createClass({displayName: "exports",
             if (utme.isValidating()) {
                 utme.isValidating(false);
             }
-            createModal.open().then(function(results) {
+            createScenarioModal.open().then(function(results) {
                 if (!results) {
                     utme.stopRecording(false);
                 } else if (results.action === 'save') {
@@ -25782,7 +25691,7 @@ module.exports = React.createClass({displayName: "exports",
 
 });
 
-},{"./modals/create-modal.jsx":220,"./modals/settings-modal.jsx":222,"react":208,"react-bootstrap":52}],220:[function(require,module,exports){
+},{"./modals/create-scenario-modal.jsx":219,"./modals/settings-modal.jsx":221,"react":208,"react-bootstrap":52}],219:[function(require,module,exports){
 var React = require('react');
 var bs = require('react-bootstrap');
 var Modal = bs.Modal;
@@ -25795,7 +25704,7 @@ var CreateModal = React.createClass({displayName: "CreateModal",
         return (
             React.createElement(Modal, {title: "Save Scenario Recording", onRequestHide: function () {}, className: "utme-create-modal", "data-ignore": "true"}, 
                 React.createElement("div", {className: "modal-body", "data-ignore": "true"}, 
-                    React.createElement("form", {"data-ignore": "true"}, 
+                    React.createElement("form", {"data-ignore": "true", ref: "form"}, 
                         React.createElement(Input, {type: "text", label: "Scenario Name", ref: "scenarioName", "data-ignore": "true"}), 
                         React.createElement(Input, {type: "text", label: "Description (Optional):", ref: "description", "data-ignore": "true"}), 
                         React.createElement(Input, {type: "text", label: "Setup Scenarios (Optional, Newline separated):", ref: "setupScenarios", "data-ignore": "true"}), 
@@ -25816,19 +25725,14 @@ var CreateModal = React.createClass({displayName: "CreateModal",
     },
 
     saveScenario: function (e) {
-        var scenarioName = this.refs.scenarioName.value;
-        var description = this.refs.description.value;
-        var setup = this.refs.setupScenarios.value;
-        var cleanup = this.refs.cleanupScenarios.value;
+        var form = this.refs.form;
+        var setup = this.refs.setupScenarios.getValue();
+        var cleanup = this.refs.cleanupScenarios.getValue();
 
-        var info = {};
-        if (name) {
-            info.name = name;
-        }
-
-        if (description) {
-            info.description = description;
-        }
+        var info = {
+            name: this.refs.scenarioName.getValue(),
+            description: this.refs.description.getValue()
+        };
 
         if (setup) {
             info.setup = {
@@ -25850,7 +25754,7 @@ var CreateModal = React.createClass({displayName: "CreateModal",
 
 module.exports = modalLauncher(CreateModal);
 
-},{"./modal-launcher.jsx":221,"react":208,"react-bootstrap":52}],221:[function(require,module,exports){
+},{"./modal-launcher.jsx":220,"react":208,"react-bootstrap":52}],220:[function(require,module,exports){
 var _ = require('../../../js/utils');
 var Promise = require('es6-promise').Promise;
 var body = require('../../body');
@@ -25877,7 +25781,7 @@ module.exports = function (modalComponent) {
 
 };
 
-},{"../../../js/utils":216,"../../body":218,"es6-promise":1}],222:[function(require,module,exports){
+},{"../../../js/utils":215,"../../body":217,"es6-promise":1}],221:[function(require,module,exports){
 var React = require('react');
 var bs = require('react-bootstrap');
 var Modal = bs.Modal;
@@ -25908,7 +25812,7 @@ var SettingsModal = React.createClass({displayName: "SettingsModal",
                                 this.renderSetting("checkbox", "Click", "record-click"), 
                                 this.renderSetting("checkbox", "Double Click", "record-dblclick"), 
                                 this.renderSetting("checkbox", "Mouse Down", "record-mousedown"), 
-                                this.renderSetting("checkbox", "Mouse Up", "record-mousedown"), 
+                                this.renderSetting("checkbox", "Mouse Up", "record-mouseup"), 
                                 this.renderSetting("checkbox", "Mouse Enter", "record-mouseenter"), 
                                 this.renderSetting("checkbox", "Mouse Leave", "record-mouseleave"), 
                                 this.renderSetting("checkbox", "Mouse Over", "record-mouseover"), 
@@ -25946,12 +25850,12 @@ var SettingsModal = React.createClass({displayName: "SettingsModal",
 
     updateSetting: function (key, value) {
         this.props.settings.set(key, value);
-        this.forceUpdate();
+        // this.forceUpdate();
     },
 
     resetDefaults: function () {
         this.props.settings.resetDefaults();
-        this.forceUpdate();
+        // this.forceUpdate();
     }
 
 });
@@ -25959,7 +25863,7 @@ var SettingsModal = React.createClass({displayName: "SettingsModal",
 module.exports = modalLauncher(SettingsModal);
 
 
-},{"../../../js/utme":217,"./modal-launcher.jsx":221,"react":208,"react-bootstrap":52}],223:[function(require,module,exports){
+},{"../../../js/utme":216,"./modal-launcher.jsx":220,"react":208,"react-bootstrap":52}],222:[function(require,module,exports){
 "use strict";
 var utme = require('../js/utme');
 var body = require('./body');
@@ -26033,4 +25937,4 @@ if (utme) {
 module.exports = utmeui;
 
 
-},{"../js/utme":217,"./body":218,"./components/control-panel.jsx":219}]},{},[210,211,212,213,214,215,216,217,218,223]);
+},{"../js/utme":216,"./body":217,"./components/control-panel.jsx":218}]},{},[216,222,211,212]);
