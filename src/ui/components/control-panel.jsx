@@ -4,7 +4,7 @@ var ButtonGroup = bs.ButtonGroup;
 var Button = bs.Button;
 var Glyphicon = bs.Glyphicon;
 
-var createModal = require('./modals/create-modal.jsx');
+var createScenarioModal = require('./modals/create-scenario-modal.jsx');
 var settingsModal = require('./modals/settings-modal.jsx');
 
 module.exports = React.createClass({
@@ -100,7 +100,7 @@ module.exports = React.createClass({
             if (utme.isValidating()) {
                 utme.isValidating(false);
             }
-            createModal.open().then(function(results) {
+            createScenarioModal.open().then(function(results) {
                 if (!results) {
                     utme.stopRecording(false);
                 } else if (results.action === 'save') {

@@ -25342,7 +25342,7 @@ var ButtonGroup = bs.ButtonGroup;
 var Button = bs.Button;
 var Glyphicon = bs.Glyphicon;
 
-var createModal = require('./modals/create-modal.jsx');
+var createScenarioModal = require('./modals/create-scenario-modal.jsx');
 var settingsModal = require('./modals/settings-modal.jsx');
 
 module.exports = React.createClass({displayName: "exports",
@@ -25438,7 +25438,7 @@ module.exports = React.createClass({displayName: "exports",
             if (utme.isValidating()) {
                 utme.isValidating(false);
             }
-            createModal.open().then(function(results) {
+            createScenarioModal.open().then(function(results) {
                 if (!results) {
                     utme.stopRecording(false);
                 } else if (results.action === 'save') {
@@ -25491,7 +25491,7 @@ module.exports = React.createClass({displayName: "exports",
 
 });
 
-},{"./modals/create-modal.jsx":217,"./modals/settings-modal.jsx":219,"react":208,"react-bootstrap":52}],217:[function(require,module,exports){
+},{"./modals/create-scenario-modal.jsx":217,"./modals/settings-modal.jsx":219,"react":208,"react-bootstrap":52}],217:[function(require,module,exports){
 var React = require('react');
 var bs = require('react-bootstrap');
 var Modal = bs.Modal;
@@ -25504,7 +25504,7 @@ var CreateModal = React.createClass({displayName: "CreateModal",
         return (
             React.createElement(Modal, {title: "Save Scenario Recording", onRequestHide: function () {}, className: "utme-create-modal", "data-ignore": "true"}, 
                 React.createElement("div", {className: "modal-body", "data-ignore": "true"}, 
-                    React.createElement("form", {"data-ignore": "true"}, 
+                    React.createElement("form", {"data-ignore": "true", ref: "form"}, 
                         React.createElement(Input, {type: "text", label: "Scenario Name", ref: "scenarioName", "data-ignore": "true"}), 
                         React.createElement(Input, {type: "text", label: "Description (Optional):", ref: "description", "data-ignore": "true"}), 
                         React.createElement(Input, {type: "text", label: "Setup Scenarios (Optional, Newline separated):", ref: "setupScenarios", "data-ignore": "true"}), 
@@ -25525,19 +25525,14 @@ var CreateModal = React.createClass({displayName: "CreateModal",
     },
 
     saveScenario: function (e) {
-        var scenarioName = this.refs.scenarioName.value;
-        var description = this.refs.description.value;
-        var setup = this.refs.setupScenarios.value;
-        var cleanup = this.refs.cleanupScenarios.value;
+        var form = this.refs.form;
+        var setup = this.refs.setupScenarios.getValue();
+        var cleanup = this.refs.cleanupScenarios.getValue();
 
-        var info = {};
-        if (name) {
-            info.name = name;
-        }
-
-        if (description) {
-            info.description = description;
-        }
+        var info = {
+            name: this.refs.scenarioName.getValue(),
+            description: this.refs.description.getValue()
+        };
 
         if (setup) {
             info.setup = {
@@ -25617,7 +25612,7 @@ var SettingsModal = React.createClass({displayName: "SettingsModal",
                                 this.renderSetting("checkbox", "Click", "record-click"), 
                                 this.renderSetting("checkbox", "Double Click", "record-dblclick"), 
                                 this.renderSetting("checkbox", "Mouse Down", "record-mousedown"), 
-                                this.renderSetting("checkbox", "Mouse Up", "record-mousedown"), 
+                                this.renderSetting("checkbox", "Mouse Up", "record-mouseup"), 
                                 this.renderSetting("checkbox", "Mouse Enter", "record-mouseenter"), 
                                 this.renderSetting("checkbox", "Mouse Leave", "record-mouseleave"), 
                                 this.renderSetting("checkbox", "Mouse Over", "record-mouseover"), 
@@ -25655,12 +25650,12 @@ var SettingsModal = React.createClass({displayName: "SettingsModal",
 
     updateSetting: function (key, value) {
         this.props.settings.set(key, value);
-        this.forceUpdate();
+        // this.forceUpdate();
     },
 
     resetDefaults: function () {
         this.props.settings.resetDefaults();
-        this.forceUpdate();
+        // this.forceUpdate();
     }
 
 });
