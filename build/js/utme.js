@@ -24266,6 +24266,212 @@ module.exports = warning;
 module.exports = require('./lib/React');
 
 },{"./lib/React":90}],209:[function(require,module,exports){
+module.exports = function() {
+  "use strict";
+  var saveAs = saveAs || (typeof navigator !== "undefined" && navigator.msSaveOrOpenBlob && navigator.msSaveOrOpenBlob.bind(navigator)) || (function(view) {
+    "use strict";
+    if (typeof navigator !== "undefined" && /MSIE [1-9]\./.test(navigator.userAgent)) {
+      return;
+    }
+    var doc = view.document,
+        get_URL = function() {
+          return view.URL || view.webkitURL || view;
+        },
+        save_link = doc.createElementNS("http://www.w3.org/1999/xhtml", "a"),
+        can_use_save_link = "download" in save_link,
+        click = function(node) {
+          var event = doc.createEvent("MouseEvents");
+          event.initMouseEvent("click", true, false, view, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
+          node.dispatchEvent(event);
+        },
+        webkit_req_fs = view.webkitRequestFileSystem,
+        req_fs = view.requestFileSystem || webkit_req_fs || view.mozRequestFileSystem,
+        throw_outside = function(ex) {
+          (view.setImmediate || view.setTimeout)(function() {
+            throw ex;
+          }, 0);
+        },
+        force_saveable_type = "application/octet-stream",
+        fs_min_size = 0,
+        arbitrary_revoke_timeout = 10,
+        revoke = function(file) {
+          var revoker = function() {
+            if (typeof file === "string") {
+              get_URL().revokeObjectURL(file);
+            } else {
+              file.remove();
+            }
+          };
+          if (view.chrome) {
+            revoker();
+          } else {
+            setTimeout(revoker, arbitrary_revoke_timeout);
+          }
+        },
+        dispatch = function(filesaver, event_types, event) {
+          event_types = [].concat(event_types);
+          var i = event_types.length;
+          while (i--) {
+            var listener = filesaver["on" + event_types[i]];
+            if (typeof listener === "function") {
+              try {
+                listener.call(filesaver, event || filesaver);
+              } catch (ex) {
+                throw_outside(ex);
+              }
+            }
+          }
+        },
+        FileSaver = function(blob, name) {
+          var filesaver = this,
+              type = blob.type,
+              blob_changed = false,
+              object_url,
+              target_view,
+              dispatch_all = function() {
+                dispatch(filesaver, "writestart progress write writeend".split(" "));
+              },
+              fs_error = function() {
+                if (blob_changed || !object_url) {
+                  object_url = get_URL().createObjectURL(blob);
+                }
+                if (target_view) {
+                  target_view.location.href = object_url;
+                } else {
+                  var new_tab = view.open(object_url, "_blank");
+                  if (new_tab == undefined && typeof safari !== "undefined") {
+                    view.location.href = object_url;
+                  }
+                }
+                filesaver.readyState = filesaver.DONE;
+                dispatch_all();
+                revoke(object_url);
+              },
+              abortable = function(func) {
+                return function() {
+                  if (filesaver.readyState !== filesaver.DONE) {
+                    return func.apply(this, arguments);
+                  }
+                };
+              },
+              create_if_not_found = {
+                create: true,
+                exclusive: false
+              },
+              slice;
+          ;
+          filesaver.readyState = filesaver.INIT;
+          if (!name) {
+            name = "download";
+          }
+          if (can_use_save_link) {
+            object_url = get_URL().createObjectURL(blob);
+            save_link.href = object_url;
+            save_link.download = name;
+            click(save_link);
+            filesaver.readyState = filesaver.DONE;
+            dispatch_all();
+            revoke(object_url);
+            return;
+          }
+          if (view.chrome && type && type !== force_saveable_type) {
+            slice = blob.slice || blob.webkitSlice;
+            blob = slice.call(blob, 0, blob.size, force_saveable_type);
+            blob_changed = true;
+          }
+          if (webkit_req_fs && name !== "download") {
+            name += ".download";
+          }
+          if (type === force_saveable_type || webkit_req_fs) {
+            target_view = view;
+          }
+          if (!req_fs) {
+            fs_error();
+            return;
+          }
+          fs_min_size += blob.size;
+          req_fs(view.TEMPORARY, fs_min_size, abortable(function(fs) {
+            fs.root.getDirectory("saved", create_if_not_found, abortable(function(dir) {
+              var save = function() {
+                dir.getFile(name, create_if_not_found, abortable(function(file) {
+                  file.createWriter(abortable(function(writer) {
+                    writer.onwriteend = function(event) {
+                      target_view.location.href = file.toURL();
+                      filesaver.readyState = filesaver.DONE;
+                      dispatch(filesaver, "writeend", event);
+                      revoke(file);
+                    };
+                    writer.onerror = function() {
+                      var error = writer.error;
+                      if (error.code !== error.ABORT_ERR) {
+                        fs_error();
+                      }
+                    };
+                    "writestart progress write abort".split(" ").forEach(function(event) {
+                      writer["on" + event] = filesaver["on" + event];
+                    });
+                    writer.write(blob);
+                    filesaver.abort = function() {
+                      writer.abort();
+                      filesaver.readyState = filesaver.DONE;
+                    };
+                    filesaver.readyState = filesaver.WRITING;
+                  }), fs_error);
+                }), fs_error);
+              };
+              dir.getFile(name, {create: false}, abortable(function(file) {
+                file.remove();
+                save();
+              }), abortable(function(ex) {
+                if (ex.code === ex.NOT_FOUND_ERR) {
+                  save();
+                } else {
+                  fs_error();
+                }
+              }));
+            }), fs_error);
+          }), fs_error);
+        },
+        FS_proto = FileSaver.prototype,
+        saveAs = function(blob, name) {
+          return new FileSaver(blob, name);
+        };
+    ;
+    FS_proto.abort = function() {
+      var filesaver = this;
+      filesaver.readyState = filesaver.DONE;
+      dispatch(filesaver, "abort");
+    };
+    FS_proto.readyState = FS_proto.INIT = 0;
+    FS_proto.WRITING = 1;
+    FS_proto.DONE = 2;
+    FS_proto.error = FS_proto.onwritestart = FS_proto.onprogress = FS_proto.onwrite = FS_proto.onabort = FS_proto.onerror = FS_proto.onwriteend = null;
+    return saveAs;
+  }(typeof self !== "undefined" && self || typeof window !== "undefined" && window || this.content));
+  if (typeof module !== "undefined" && module !== null) {
+    module.exports = saveAs;
+  } else if ((typeof define !== "undefined" && define !== null) && (define.amd != null)) {
+    define([], function() {
+      return saveAs;
+    });
+  }
+  return {};
+}.call(Reflect.global);
+
+
+//# sourceURL=/home/davidtittsworth/projects/utme/src/js/persisters/FileSaver.js
+},{}],210:[function(require,module,exports){
+"use strict";
+var utme = require('../utme');
+var saveAs = require('./FileSaver');
+utme.registerSaveHandler(function(scenario, utme) {
+  var blob = new Blob([JSON.stringify(scenario, null, " ")], {type: "text/plain;charset=utf-8"});
+  saveAs(blob, scenario.name + ".json");
+});
+
+
+//# sourceURL=/home/davidtittsworth/projects/utme/src/js/persisters/utme-file-persister.js
+},{"../utme":216,"./FileSaver":209}],211:[function(require,module,exports){
 "use strict";
 var utme = require('../utme.js');
 var serverReporter = {
@@ -24337,7 +24543,7 @@ function getParameterByName(name) {
 
 
 //# sourceURL=/home/davidtittsworth/projects/utme/src/js/reporters/server-reporter.js
-},{"../utme.js":214}],210:[function(require,module,exports){
+},{"../utme.js":216}],212:[function(require,module,exports){
 "use strict";
 function unique(el, doc) {
   if (!el || !el.tagName) {
@@ -24424,7 +24630,7 @@ module.exports = unique;
 
 
 //# sourceURL=/home/davidtittsworth/projects/utme/src/js/selectorFinder.js
-},{}],211:[function(require,module,exports){
+},{}],213:[function(require,module,exports){
 "use strict";
 var _ = require('./utils');
 var local_storage_key = 'utme-settings';
@@ -24468,7 +24674,7 @@ module.exports = Settings;
 
 
 //# sourceURL=/home/davidtittsworth/projects/utme/src/js/settings.js
-},{"./utils":213}],212:[function(require,module,exports){
+},{"./utils":215}],214:[function(require,module,exports){
 "use strict";
 var _ = require('./utils');
 var Simulate = {
@@ -24554,7 +24760,7 @@ module.exports = Simulate;
 
 
 //# sourceURL=/home/davidtittsworth/projects/utme/src/js/simulate.js
-},{"./utils":213}],213:[function(require,module,exports){
+},{"./utils":215}],215:[function(require,module,exports){
 "use strict";
 (function() {
   var Ap = Array.prototype;
@@ -24601,7 +24807,7 @@ module.exports = {
 
 
 //# sourceURL=/home/davidtittsworth/projects/utme/src/js/utils.js
-},{}],214:[function(require,module,exports){
+},{}],216:[function(require,module,exports){
 (function (global){
 "use strict";
 var _ = require('./utils');
@@ -25295,7 +25501,7 @@ module.exports = utme;
 
 //# sourceURL=/home/davidtittsworth/projects/utme/src/js/utme.js
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./selectorFinder":210,"./settings":211,"./simulate":212,"./utils":213,"es6-promise":2}],215:[function(require,module,exports){
+},{"./selectorFinder":212,"./settings":213,"./simulate":214,"./utils":215,"es6-promise":2}],217:[function(require,module,exports){
 "use strict";
 var React = require('react');
 var containers = [];
@@ -25335,14 +25541,14 @@ module.exports = {
 
 
 //# sourceURL=/home/davidtittsworth/projects/utme/src/ui/body.js
-},{"react":208}],216:[function(require,module,exports){
+},{"react":208}],218:[function(require,module,exports){
 var React = require('react');
 var bs = require('react-bootstrap');
 var ButtonGroup = bs.ButtonGroup;
 var Button = bs.Button;
 var Glyphicon = bs.Glyphicon;
 
-var createScenarioModal = require('./modals/create-scenario-modal.jsx');
+var createModal = require('./modals/create-modal.jsx');
 var settingsModal = require('./modals/settings-modal.jsx');
 
 module.exports = React.createClass({displayName: "exports",
@@ -25438,7 +25644,7 @@ module.exports = React.createClass({displayName: "exports",
             if (utme.isValidating()) {
                 utme.isValidating(false);
             }
-            createScenarioModal.open().then(function(results) {
+            createModal.open().then(function(results) {
                 if (!results) {
                     utme.stopRecording(false);
                 } else if (results.action === 'save') {
@@ -25491,7 +25697,7 @@ module.exports = React.createClass({displayName: "exports",
 
 });
 
-},{"./modals/create-scenario-modal.jsx":217,"./modals/settings-modal.jsx":219,"react":208,"react-bootstrap":52}],217:[function(require,module,exports){
+},{"./modals/create-modal.jsx":219,"./modals/settings-modal.jsx":221,"react":208,"react-bootstrap":52}],219:[function(require,module,exports){
 var React = require('react');
 var bs = require('react-bootstrap');
 var Modal = bs.Modal;
@@ -25504,7 +25710,7 @@ var CreateModal = React.createClass({displayName: "CreateModal",
         return (
             React.createElement(Modal, {title: "Save Scenario Recording", onRequestHide: function () {}, className: "utme-create-modal", "data-ignore": "true"}, 
                 React.createElement("div", {className: "modal-body", "data-ignore": "true"}, 
-                    React.createElement("form", {"data-ignore": "true", ref: "form"}, 
+                    React.createElement("form", {"data-ignore": "true"}, 
                         React.createElement(Input, {type: "text", label: "Scenario Name", ref: "scenarioName", "data-ignore": "true"}), 
                         React.createElement(Input, {type: "text", label: "Description (Optional):", ref: "description", "data-ignore": "true"}), 
                         React.createElement(Input, {type: "text", label: "Setup Scenarios (Optional, Newline separated):", ref: "setupScenarios", "data-ignore": "true"}), 
@@ -25525,14 +25731,19 @@ var CreateModal = React.createClass({displayName: "CreateModal",
     },
 
     saveScenario: function (e) {
-        var form = this.refs.form;
-        var setup = this.refs.setupScenarios.getValue();
-        var cleanup = this.refs.cleanupScenarios.getValue();
+        var scenarioName = this.refs.scenarioName.value;
+        var description = this.refs.description.value;
+        var setup = this.refs.setupScenarios.value;
+        var cleanup = this.refs.cleanupScenarios.value;
 
-        var info = {
-            name: this.refs.scenarioName.getValue(),
-            description: this.refs.description.getValue()
-        };
+        var info = {};
+        if (name) {
+            info.name = name;
+        }
+
+        if (description) {
+            info.description = description;
+        }
 
         if (setup) {
             info.setup = {
@@ -25554,7 +25765,7 @@ var CreateModal = React.createClass({displayName: "CreateModal",
 
 module.exports = modalLauncher(CreateModal);
 
-},{"./modal-launcher.jsx":218,"react":208,"react-bootstrap":52}],218:[function(require,module,exports){
+},{"./modal-launcher.jsx":220,"react":208,"react-bootstrap":52}],220:[function(require,module,exports){
 var _ = require('../../../js/utils');
 var Promise = require('es6-promise').Promise;
 var body = require('../../body');
@@ -25581,7 +25792,7 @@ module.exports = function (modalComponent) {
 
 };
 
-},{"../../../js/utils":213,"../../body":215,"es6-promise":2}],219:[function(require,module,exports){
+},{"../../../js/utils":215,"../../body":217,"es6-promise":2}],221:[function(require,module,exports){
 var React = require('react');
 var bs = require('react-bootstrap');
 var Modal = bs.Modal;
@@ -25612,7 +25823,7 @@ var SettingsModal = React.createClass({displayName: "SettingsModal",
                                 this.renderSetting("checkbox", "Click", "record-click"), 
                                 this.renderSetting("checkbox", "Double Click", "record-dblclick"), 
                                 this.renderSetting("checkbox", "Mouse Down", "record-mousedown"), 
-                                this.renderSetting("checkbox", "Mouse Up", "record-mouseup"), 
+                                this.renderSetting("checkbox", "Mouse Up", "record-mousedown"), 
                                 this.renderSetting("checkbox", "Mouse Enter", "record-mouseenter"), 
                                 this.renderSetting("checkbox", "Mouse Leave", "record-mouseleave"), 
                                 this.renderSetting("checkbox", "Mouse Over", "record-mouseover"), 
@@ -25650,12 +25861,12 @@ var SettingsModal = React.createClass({displayName: "SettingsModal",
 
     updateSetting: function (key, value) {
         this.props.settings.set(key, value);
-        // this.forceUpdate();
+        this.forceUpdate();
     },
 
     resetDefaults: function () {
         this.props.settings.resetDefaults();
-        // this.forceUpdate();
+        this.forceUpdate();
     }
 
 });
@@ -25663,7 +25874,7 @@ var SettingsModal = React.createClass({displayName: "SettingsModal",
 module.exports = modalLauncher(SettingsModal);
 
 
-},{"../../../js/utme":214,"./modal-launcher.jsx":218,"react":208,"react-bootstrap":52}],220:[function(require,module,exports){
+},{"../../../js/utme":216,"./modal-launcher.jsx":220,"react":208,"react-bootstrap":52}],222:[function(require,module,exports){
 "use strict";
 var utme = require('../js/utme');
 var body = require('./body');
@@ -25738,4 +25949,4 @@ module.exports = utmeui;
 
 
 //# sourceURL=/home/davidtittsworth/projects/utme/src/ui/utme-ui.js
-},{"../js/utme":214,"./body":215,"./components/control-panel.jsx":216}]},{},[209,210,211,212,213,214,215,220]);
+},{"../js/utme":216,"./body":217,"./components/control-panel.jsx":218}]},{},[209,210,211,212,213,214,215,216,217,222]);

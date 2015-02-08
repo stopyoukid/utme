@@ -28,7 +28,7 @@ var SettingsModal = React.createClass({
                                 {this.renderSetting("checkbox", "Click", "record-click")}
                                 {this.renderSetting("checkbox", "Double Click", "record-dblclick")}
                                 {this.renderSetting("checkbox", "Mouse Down", "record-mousedown")}
-                                {this.renderSetting("checkbox", "Mouse Up", "record-mouseup")}
+                                {this.renderSetting("checkbox", "Mouse Up", "record-mousedown")}
                                 {this.renderSetting("checkbox", "Mouse Enter", "record-mouseenter")}
                                 {this.renderSetting("checkbox", "Mouse Leave", "record-mouseleave")}
                                 {this.renderSetting("checkbox", "Mouse Over", "record-mouseover")}
@@ -66,12 +66,12 @@ var SettingsModal = React.createClass({
 
     updateSetting: function (key, value) {
         this.props.settings.set(key, value);
-        // this.forceUpdate();
+        this.forceUpdate();
     },
 
     resetDefaults: function () {
         this.props.settings.resetDefaults();
-        // this.forceUpdate();
+        this.forceUpdate();
     }
 
 });
