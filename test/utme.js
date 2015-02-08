@@ -20,7 +20,15 @@ describe('Utme Tests', function(){
     };
     $ = require('jquery');
     selectorFinder = require("../src/js/selectorFinder").selectorFinder;
-    utme = require("../src/js/utme")(this, null, selectorFinder);
+
+    // Clean utme, cause it is a singleton right now
+    for (var i in require.cache) {
+        if (i.indexOf("utme.js") >= 0) {
+            delete require.cache[i];
+        }
+    }
+
+    utme = require("../src/js/utme");
   });
 
   describe ('selector finding', function() {
@@ -33,7 +41,6 @@ describe('Utme Tests', function(){
       elements.appendTo(document.body);
 
       var locator = utme.createElementLocator(elements[0]);
-      utme.finalizeLocator(locator);
 
       assert.equal(locator.selectors[0], "div:eq(0)");
     })
@@ -43,7 +50,6 @@ describe('Utme Tests', function(){
       elements.appendTo(document.body);
 
       locator = utme.createElementLocator(elements[1]);
-      utme.finalizeLocator(locator);
 
       assert.equal(locator.selectors[0], "div:eq(1)");
     })
@@ -53,7 +59,7 @@ describe('Utme Tests', function(){
       elements.appendTo(document.body);
 
       locator = utme.createElementLocator(elements[1]);
-      utme.finalizeLocator(locator);
+      // utme.finalizeLocator(locator);
 
       assert.equal(locator.selectors[0], "div.myClass:eq(0)");
     })
@@ -63,7 +69,6 @@ describe('Utme Tests', function(){
       elements.appendTo(document.body);
 
       locator = utme.createElementLocator(elements[0]);
-      utme.finalizeLocator(locator);
 
       assert.equal(locator.selectors[0], "div.myClass:eq(0)");
     })
@@ -73,7 +78,6 @@ describe('Utme Tests', function(){
       elements.appendTo(document.body);
 
       locator = utme.createElementLocator(elements[1]);
-      utme.finalizeLocator(locator);
 
       assert.equal(locator.selectors[0], "div.myClass:eq(1)");
     })
@@ -83,9 +87,9 @@ describe('Utme Tests', function(){
       elements.appendTo(document.body);
 
       locator = utme.createElementLocator(elements[0].childNodes[0]);
-      utme.finalizeLocator(locator);
 
-      assert.equal(locator.selectors[0], "div.myClass:eq(1)");
+      assert.equal(locator.selectors[0], "div.myClass div.myClass:eq(0)");
+      assert.equal(locator.selectors[1], "div.myClass:eq(1)");
     })
 
     it('should calculate the correct selector 7', function(){
@@ -93,10 +97,22 @@ describe('Utme Tests', function(){
       elements.appendTo(document.body);
 
       locator = utme.createElementLocator(elements[0]);
-      utme.finalizeLocator(locator);
 
       assert.equal(locator.selectors[0], "div[title=\"myTitle\"]:eq(0)");
     })
+
+    it('should calculate the correct selector 8', function(){
+      var elements = $("<div title='myTitle'></div><span></span><div class='cool'><div><div></div></div></div>");
+      elements.appendTo(document.body);
+
+      var innerDiv = $('.cool > div > div', document.body);
+
+      locator = utme.createElementLocator(innerDiv[0]);
+
+      assert.equal(locator.selectors[0], "div.cool div:eq(1)");
+      assert.equal(locator.selectors[1], "div:eq(3)");
+    })
+
 
   });
 
@@ -190,27 +206,32 @@ describe('Utme Tests', function(){
   });
 
   describe('run scenario', function () {
-    var singleLoadScenario = {
+    var singleClickScenario = {
       steps: [{
-        eventName: 'load',
+        eventName: 'mousedown',
         data: {
-          url: {
-
-          }
+            locator: {
+                uniqueId: '1',
+                selectors: [
+                  'div'
+                ]
+            }
         }
       }]
     };
 
-    it ('run a scenario with 1 step', function () {
+    it ('load a scenario when runScenario is called', function () {
         utme.runScenario('whatever', function(name, callback) {
-            callback(singleLoadScenario);
+            callback(singleClickScenario);
         });
     });
 
-    it ('log successful if completes with a single step', function () {
+    it ('successfully complete with a single step', function (done) {
       utme.registerReportHandler({
           log: function (txt) {
-              console.log(txt);
+              if (txt.indexOf("Completed") >= 0) {
+                  done();
+              }
           },
           error: function (txt) {
               console.log(txt);
@@ -218,9 +239,22 @@ describe('Utme Tests', function(){
       });
 
       utme.registerLoadHandler(function (name, callback) {
-          callback(singleLoadScenario);
+          callback(singleClickScenario);
       });
-      
+
+      utme.runScenario('whatever');
+    });
+
+    it ('fire click event on element', function (done) {
+      var elements = $("<div></div>");
+      elements.appendTo(document.body);
+
+      $('div').on('mousedown', done);
+
+      utme.registerLoadHandler(function (name, callback) {
+        callback(singleClickScenario);
+      });
+
       utme.runScenario('whatever');
     });
   });

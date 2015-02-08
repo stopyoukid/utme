@@ -1,4 +1,63 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+// shim for using process in browser
+
+var process = module.exports = {};
+var queue = [];
+var draining = false;
+
+function drainQueue() {
+    if (draining) {
+        return;
+    }
+    draining = true;
+    var currentQueue;
+    var len = queue.length;
+    while(len) {
+        currentQueue = queue;
+        queue = [];
+        var i = -1;
+        while (++i < len) {
+            currentQueue[i]();
+        }
+        len = queue.length;
+    }
+    draining = false;
+}
+process.nextTick = function (fun) {
+    queue.push(fun);
+    if (!draining) {
+        setTimeout(drainQueue, 0);
+    }
+};
+
+process.title = 'browser';
+process.browser = true;
+process.env = {};
+process.argv = [];
+process.version = ''; // empty string to avoid regexp issues
+
+function noop() {}
+
+process.on = noop;
+process.addListener = noop;
+process.once = noop;
+process.off = noop;
+process.removeListener = noop;
+process.removeAllListeners = noop;
+process.emit = noop;
+
+process.binding = function (name) {
+    throw new Error('process.binding is not supported');
+};
+
+// TODO(shtylman)
+process.cwd = function () { return '/' };
+process.chdir = function (dir) {
+    throw new Error('process.chdir is not supported');
+};
+process.umask = function() { return 0; };
+
+},{}],2:[function(require,module,exports){
 (function (process,global){
 /*!
  * @overview es6-promise - a tiny implementation of Promises/A+.
@@ -961,357 +1020,7 @@
     }
 }).call(this);
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"_process":2}],2:[function(require,module,exports){
-// shim for using process in browser
-
-var process = module.exports = {};
-var queue = [];
-var draining = false;
-
-function drainQueue() {
-    if (draining) {
-        return;
-    }
-    draining = true;
-    var currentQueue;
-    var len = queue.length;
-    while(len) {
-        currentQueue = queue;
-        queue = [];
-        var i = -1;
-        while (++i < len) {
-            currentQueue[i]();
-        }
-        len = queue.length;
-    }
-    draining = false;
-}
-process.nextTick = function (fun) {
-    queue.push(fun);
-    if (!draining) {
-        setTimeout(drainQueue, 0);
-    }
-};
-
-process.title = 'browser';
-process.browser = true;
-process.env = {};
-process.argv = [];
-process.version = ''; // empty string to avoid regexp issues
-
-function noop() {}
-
-process.on = noop;
-process.addListener = noop;
-process.once = noop;
-process.off = noop;
-process.removeListener = noop;
-process.removeAllListeners = noop;
-process.emit = noop;
-
-process.binding = function (name) {
-    throw new Error('process.binding is not supported');
-};
-
-// TODO(shtylman)
-process.cwd = function () { return '/' };
-process.chdir = function (dir) {
-    throw new Error('process.chdir is not supported');
-};
-process.umask = function() { return 0; };
-
-},{}],3:[function(require,module,exports){
-"use strict";
-var _ = require('./utils');
-var Simulate = {
-  event: function(element, eventName, options) {
-    var evt;
-    if (document.createEvent) {
-      evt = document.createEvent("HTMLEvents");
-      evt.initEvent(eventName, eventName != 'mouseenter' && eventName != 'mouseleave', true);
-      _.extend(evt, options);
-      element.dispatchEvent(evt);
-    } else {
-      evt = document.createEventObject();
-      element.fireEvent('on' + eventName, evt);
-    }
-  },
-  keyEvent: function(element, type, options) {
-    var evt,
-        e = {
-          bubbles: true,
-          cancelable: true,
-          view: window,
-          ctrlKey: false,
-          altKey: false,
-          shiftKey: false,
-          metaKey: false,
-          keyCode: 0,
-          charCode: 0
-        };
-    _.extend(e, options);
-    if (document.createEvent) {
-      try {
-        evt = document.createEvent('KeyEvents');
-        evt.initKeyEvent(type, e.bubbles, e.cancelable, e.view, e.ctrlKey, e.altKey, e.shiftKey, e.metaKey, e.keyCode, e.charCode);
-        element.dispatchEvent(evt);
-      } catch (err) {
-        evt = document.createEvent("Events");
-        evt.initEvent(type, e.bubbles, e.cancelable);
-        _.extend(evt, {
-          view: e.view,
-          ctrlKey: e.ctrlKey,
-          altKey: e.altKey,
-          shiftKey: e.shiftKey,
-          metaKey: e.metaKey,
-          keyCode: e.keyCode,
-          charCode: e.charCode
-        });
-        element.dispatchEvent(evt);
-      }
-    }
-  }
-};
-Simulate.keypress = function(element, chr) {
-  var charCode = chr.charCodeAt(0);
-  this.keyEvent(element, 'keypress', {
-    keyCode: charCode,
-    charCode: charCode
-  });
-};
-Simulate.keydown = function(element, chr) {
-  var charCode = chr.charCodeAt(0);
-  this.keyEvent(element, 'keydown', {
-    keyCode: charCode,
-    charCode: charCode
-  });
-};
-Simulate.keyup = function(element, chr) {
-  var charCode = chr.charCodeAt(0);
-  this.keyEvent(element, 'keyup', {
-    keyCode: charCode,
-    charCode: charCode
-  });
-};
-var events = ['click', 'focus', 'blur', 'dblclick', 'input', 'change', 'mousedown', 'mousemove', 'mouseout', 'mouseover', 'mouseup', 'mouseenter', 'mouseleave', 'resize', 'scroll', 'select', 'submit', 'load', 'unload'];
-for (var i = events.length; i--; ) {
-  var event = events[i];
-  Simulate[event] = (function(evt) {
-    return function(element, options) {
-      this.event(element, evt, options);
-    };
-  }(event));
-}
-module.exports = Simulate;
-
-
-},{"./utils":10}],4:[function(require,module,exports){
-(function (global){
-module.exports = function() {
-  "use strict";
-  var saveAs = saveAs || (typeof navigator !== "undefined" && navigator.msSaveOrOpenBlob && navigator.msSaveOrOpenBlob.bind(navigator)) || (function(view) {
-    "use strict";
-    if (typeof navigator !== "undefined" && /MSIE [1-9]\./.test(navigator.userAgent)) {
-      return;
-    }
-    var doc = view.document,
-        get_URL = function() {
-          return view.URL || view.webkitURL || view;
-        },
-        save_link = doc.createElementNS("http://www.w3.org/1999/xhtml", "a"),
-        can_use_save_link = "download" in save_link,
-        click = function(node) {
-          var event = doc.createEvent("MouseEvents");
-          event.initMouseEvent("click", true, false, view, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
-          node.dispatchEvent(event);
-        },
-        webkit_req_fs = view.webkitRequestFileSystem,
-        req_fs = view.requestFileSystem || webkit_req_fs || view.mozRequestFileSystem,
-        throw_outside = function(ex) {
-          (view.setImmediate || view.setTimeout)(function() {
-            throw ex;
-          }, 0);
-        },
-        force_saveable_type = "application/octet-stream",
-        fs_min_size = 0,
-        arbitrary_revoke_timeout = 10,
-        revoke = function(file) {
-          var revoker = function() {
-            if (typeof file === "string") {
-              get_URL().revokeObjectURL(file);
-            } else {
-              file.remove();
-            }
-          };
-          if (view.chrome) {
-            revoker();
-          } else {
-            setTimeout(revoker, arbitrary_revoke_timeout);
-          }
-        },
-        dispatch = function(filesaver, event_types, event) {
-          event_types = [].concat(event_types);
-          var i = event_types.length;
-          while (i--) {
-            var listener = filesaver["on" + event_types[i]];
-            if (typeof listener === "function") {
-              try {
-                listener.call(filesaver, event || filesaver);
-              } catch (ex) {
-                throw_outside(ex);
-              }
-            }
-          }
-        },
-        FileSaver = function(blob, name) {
-          var filesaver = this,
-              type = blob.type,
-              blob_changed = false,
-              object_url,
-              target_view,
-              dispatch_all = function() {
-                dispatch(filesaver, "writestart progress write writeend".split(" "));
-              },
-              fs_error = function() {
-                if (blob_changed || !object_url) {
-                  object_url = get_URL().createObjectURL(blob);
-                }
-                if (target_view) {
-                  target_view.location.href = object_url;
-                } else {
-                  var new_tab = view.open(object_url, "_blank");
-                  if (new_tab == undefined && typeof safari !== "undefined") {
-                    view.location.href = object_url;
-                  }
-                }
-                filesaver.readyState = filesaver.DONE;
-                dispatch_all();
-                revoke(object_url);
-              },
-              abortable = function(func) {
-                return function() {
-                  if (filesaver.readyState !== filesaver.DONE) {
-                    return func.apply(this, arguments);
-                  }
-                };
-              },
-              create_if_not_found = {
-                create: true,
-                exclusive: false
-              },
-              slice;
-          ;
-          filesaver.readyState = filesaver.INIT;
-          if (!name) {
-            name = "download";
-          }
-          if (can_use_save_link) {
-            object_url = get_URL().createObjectURL(blob);
-            save_link.href = object_url;
-            save_link.download = name;
-            click(save_link);
-            filesaver.readyState = filesaver.DONE;
-            dispatch_all();
-            revoke(object_url);
-            return;
-          }
-          if (view.chrome && type && type !== force_saveable_type) {
-            slice = blob.slice || blob.webkitSlice;
-            blob = slice.call(blob, 0, blob.size, force_saveable_type);
-            blob_changed = true;
-          }
-          if (webkit_req_fs && name !== "download") {
-            name += ".download";
-          }
-          if (type === force_saveable_type || webkit_req_fs) {
-            target_view = view;
-          }
-          if (!req_fs) {
-            fs_error();
-            return;
-          }
-          fs_min_size += blob.size;
-          req_fs(view.TEMPORARY, fs_min_size, abortable(function(fs) {
-            fs.root.getDirectory("saved", create_if_not_found, abortable(function(dir) {
-              var save = function() {
-                dir.getFile(name, create_if_not_found, abortable(function(file) {
-                  file.createWriter(abortable(function(writer) {
-                    writer.onwriteend = function(event) {
-                      target_view.location.href = file.toURL();
-                      filesaver.readyState = filesaver.DONE;
-                      dispatch(filesaver, "writeend", event);
-                      revoke(file);
-                    };
-                    writer.onerror = function() {
-                      var error = writer.error;
-                      if (error.code !== error.ABORT_ERR) {
-                        fs_error();
-                      }
-                    };
-                    "writestart progress write abort".split(" ").forEach(function(event) {
-                      writer["on" + event] = filesaver["on" + event];
-                    });
-                    writer.write(blob);
-                    filesaver.abort = function() {
-                      writer.abort();
-                      filesaver.readyState = filesaver.DONE;
-                    };
-                    filesaver.readyState = filesaver.WRITING;
-                  }), fs_error);
-                }), fs_error);
-              };
-              dir.getFile(name, {create: false}, abortable(function(file) {
-                file.remove();
-                save();
-              }), abortable(function(ex) {
-                if (ex.code === ex.NOT_FOUND_ERR) {
-                  save();
-                } else {
-                  fs_error();
-                }
-              }));
-            }), fs_error);
-          }), fs_error);
-        },
-        FS_proto = FileSaver.prototype,
-        saveAs = function(blob, name) {
-          return new FileSaver(blob, name);
-        };
-    ;
-    FS_proto.abort = function() {
-      var filesaver = this;
-      filesaver.readyState = filesaver.DONE;
-      dispatch(filesaver, "abort");
-    };
-    FS_proto.readyState = FS_proto.INIT = 0;
-    FS_proto.WRITING = 1;
-    FS_proto.DONE = 2;
-    FS_proto.error = FS_proto.onwritestart = FS_proto.onprogress = FS_proto.onwrite = FS_proto.onabort = FS_proto.onerror = FS_proto.onwriteend = null;
-    return saveAs;
-  }(typeof self !== "undefined" && self || typeof window !== "undefined" && window || this.content));
-  if (typeof module !== "undefined" && module !== null) {
-    module.exports = saveAs;
-  } else if ((typeof define !== "undefined" && define !== null) && (define.amd != null)) {
-    define([], function() {
-      return saveAs;
-    });
-  }
-  return {};
-}.call(typeof global !== 'undefined' ? global : this);
-
-
-}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],5:[function(require,module,exports){
-"use strict";
-var utme = require('../utme');
-var saveAs = require('./FileSaver');
-utme.registerSaveHandler(function(scenario, utme) {
-  var blob = new Blob([JSON.stringify(scenario, null, " ")], {type: "text/plain;charset=utf-8"});
-  saveAs(blob, scenario.name + ".json");
-});
-
-
-},{"../utme":11,"./FileSaver":4}],6:[function(require,module,exports){
+},{"_process":1}],3:[function(require,module,exports){
 "use strict";
 var utme = require('../utme.js');
 var serverReporter = {
@@ -1382,30 +1091,41 @@ function getParameterByName(name) {
 }
 
 
-},{"../utme.js":11}],7:[function(require,module,exports){
+//# sourceURL=/home/davidtittsworth/projects/utme/src/js/reporters/server-reporter.js
+},{"../utme.js":8}],4:[function(require,module,exports){
 "use strict";
 function unique(el, doc) {
   if (!el || !el.tagName) {
     throw new TypeError('Element expected');
   }
-  function isUnique(selectors) {
-    return doc.querySelectorAll(mkSelectorString(selectors)).length == 1;
+  function _getSelectorIndex(element, selector) {
+    var existingIndex = 0;
+    var items = doc.querySelectorAll(selector);
+    for (var i = 0; i < items.length; i++) {
+      if (items[i] === element) {
+        existingIndex = i;
+        break;
+      }
+    }
+    return existingIndex;
   }
-  var selectors = getSelectors(el, isUnique);
-  function mkSelectorString(selectors) {
-    return selectors.map(function(sel) {
-      return sel.selector;
-    }).join(" > ");
-  }
-  var existingIndex = 0;
-  var items = doc.querySelectorAll(mkSelectorString(selectors));
-  for (var i = 0; i < items.length; i++) {
-    if (items[i] === el) {
-      existingIndex = i;
-      break;
+  var elSelector = getElementSelector(el).selector;
+  var isSimpleSelector = elSelector === el.tagName.toLowerCase();
+  var ancestorSelector;
+  var currElement = el;
+  while (currElement.parentElement != null && !ancestorSelector) {
+    currElement = currElement.parentElement;
+    var selector = getElementSelector(currElement).selector;
+    if (selector !== currElement.tagName.toLowerCase()) {
+      ancestorSelector = selector + (currElement === el.parentElement && isSimpleSelector ? " > " : " ") + elSelector;
     }
   }
-  return mkSelectorString(selectors) + ":eq(" + existingIndex + ")";
+  var finalSelectors = [];
+  if (ancestorSelector) {
+    finalSelectors.push(ancestorSelector + ":eq(" + _getSelectorIndex(el, ancestorSelector) + ")");
+  }
+  finalSelectors.push(elSelector + ":eq(" + _getSelectorIndex(el, elSelector) + ")");
+  return finalSelectors;
 }
 ;
 function getClassNames(el) {
@@ -1419,7 +1139,7 @@ function getClassNames(el) {
   className = className.replace(/^\s+|\s+$/g, '');
   return className.trim().split(' ');
 }
-function getSelectors(el, isUnique) {
+function getElementSelector(el, isUnique) {
   var parts = [];
   var label = null;
   var title = null;
@@ -1453,12 +1173,13 @@ function getSelectors(el, isUnique) {
   if (!parts.length) {
     throw new Error('Failed to identify CSS selector');
   }
-  return parts;
+  return parts[0];
 }
 module.exports = unique;
 
 
-},{}],8:[function(require,module,exports){
+//# sourceURL=/home/davidtittsworth/projects/utme/src/js/selectorFinder.js
+},{}],5:[function(require,module,exports){
 "use strict";
 var _ = require('./utils');
 var local_storage_key = 'utme-settings';
@@ -1501,7 +1222,8 @@ Settings.prototype = {
 module.exports = Settings;
 
 
-},{"./utils":10}],9:[function(require,module,exports){
+//# sourceURL=/home/davidtittsworth/projects/utme/src/js/settings.js
+},{"./utils":7}],6:[function(require,module,exports){
 "use strict";
 var _ = require('./utils');
 var Simulate = {
@@ -1586,7 +1308,8 @@ for (var i = events.length; i--; ) {
 module.exports = Simulate;
 
 
-},{"./utils":10}],10:[function(require,module,exports){
+//# sourceURL=/home/davidtittsworth/projects/utme/src/js/simulate.js
+},{"./utils":7}],7:[function(require,module,exports){
 "use strict";
 (function() {
   var Ap = Array.prototype;
@@ -1632,12 +1355,13 @@ module.exports = {
 };
 
 
-},{}],11:[function(require,module,exports){
+//# sourceURL=/home/davidtittsworth/projects/utme/src/js/utils.js
+},{}],8:[function(require,module,exports){
 (function (global){
 "use strict";
 var _ = require('./utils');
 var Promise = require('es6-promise').Promise;
-var Simulate = require('./Simulate');
+var Simulate = require('./simulate');
 var selectorFinder = require('./selectorFinder');
 var Settings = require('./settings');
 var importantStepLength = 500;
@@ -1734,6 +1458,11 @@ function runStep(scenario, idx, toSkip) {
         search += (search ? "&" : "?") + "utme_test_server=" + testServer;
       }
       window.location.replace(location + search + hash);
+      console.log((location.protocol + location.host + location.search));
+      console.log((step.data.url.protocol + step.data.url.host + step.data.url.search));
+      if ((location.protocol + location.host + location.search) === (step.data.url.protocol + step.data.url.host + step.data.url.search)) {
+        runNextStep(scenario, idx, toSkip, 0);
+      }
     } else if (step.eventName == 'timeout') {
       if (state.autoRun) {
         runNextStep(scenario, idx, toSkip, step.data.amount);
@@ -1942,16 +1671,6 @@ function fragmentFromString(strHTML) {
   temp.innerHTML = strHTML;
   return temp.content ? temp.content : temp;
 }
-function postProcessSteps(steps) {
-  for (var i = 0; i < steps.length; i++) {
-    var step = steps[i];
-    var locator = step && step.data.locator;
-    var selector = locator && locator.selectors[0];
-    if (selector && selector.doc) {
-      utme.finalizeLocator(locator);
-    }
-  }
-}
 function getUniqueIdFromStep(step) {
   return step && step.data && step.data.locator && step.data.locator.uniqueId;
 }
@@ -2056,25 +1775,14 @@ var utme = {
     var eleHtml = element.cloneNode().outerHTML;
     var eleSelectors = [];
     if (element.tagName.toUpperCase() == 'BODY' || element.tagName.toUpperCase() == 'HTML') {
-      var eleSelectors = [element.tagName];
+      eleSelectors = [element.tagName];
     } else {
-      var docHtml = document.body.innerHTML;
-      var eleSelectors = [{
-        doc: docHtml,
-        id: uniqueId,
-        ele: eleHtml
-      }];
+      eleSelectors = selectorFinder(element, document.body);
     }
     return {
       uniqueId: uniqueId,
       selectors: eleSelectors
     };
-  },
-  finalizeLocator: function(locator) {
-    var selector = locator.selectors[0];
-    var frag = fragmentFromString(selector.doc);
-    var ele = frag.querySelectorAll('[data-unique-id=\'' + selector.id + '\']');
-    locator.selectors = [selectorFinder(ele[0], frag)];
   },
   registerEvent: function(eventName, data, idx) {
     if (utme.isRecording() || utme.isValidating()) {
@@ -2139,7 +1847,6 @@ var utme = {
         newScenario.name = prompt('Enter scenario name');
       }
       if (newScenario.name) {
-        postProcessSteps(newScenario.steps);
         state.scenarios.push(newScenario);
         if (saveHandlers && saveHandlers.length) {
           for (var i = 0; i < saveHandlers.length; i++) {
@@ -2341,5 +2048,6 @@ window.addEventListener('error', function(err) {
 module.exports = utme;
 
 
+//# sourceURL=/home/davidtittsworth/projects/utme/src/js/utme.js
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./Simulate":3,"./selectorFinder":7,"./settings":8,"./utils":10,"es6-promise":1}]},{},[4,5,6,7,8,9,10,11]);
+},{"./selectorFinder":4,"./settings":5,"./simulate":6,"./utils":7,"es6-promise":2}]},{},[3,4,5,6,7,8]);

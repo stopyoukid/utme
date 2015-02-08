@@ -13,46 +13,45 @@ function unique(el, doc) {
     throw new TypeError('Element expected');
   }
 
-  // var topElement = el;
-  // while (topElement.parentElement != null) {
-  //     topElement = topElement.parentElement;
-  // }
+  function _getSelectorIndex(element, selector) {
+      var existingIndex = 0;
+      var items =  doc.querySelectorAll(selector);
 
-  function isUnique(selectors) {
-    return doc.querySelectorAll(mkSelectorString(selectors)).length == 1;
+      for (var i = 0; i < items.length; i++) {
+          if (items[i] === element) {
+              existingIndex = i;
+              break;
+          }
+      }
+      return existingIndex;
   }
 
-  var selectors  = getSelectors(el, isUnique);
+  var elSelector = getElementSelector(el).selector;
+  var isSimpleSelector = elSelector === el.tagName.toLowerCase();
+  var ancestorSelector;
 
-  function mkSelectorString(selectors) {
-    return selectors.map(function (sel) {
-      return sel.selector;
-    }).join(" > ");
+  var currElement = el;
+  while (currElement.parentElement != null && !ancestorSelector) {
+      currElement = currElement.parentElement;
+      var selector = getElementSelector(currElement).selector;
+
+      // Typically elements that have a class name or title, those are less likely
+      // to change, and also be unique.  So, we are trying to find an ancestor
+      // to anchor (or scope) the search for the element, and make it less brittle.
+      if (selector !== currElement.tagName.toLowerCase()) {
+          ancestorSelector = selector + (currElement === el.parentElement && isSimpleSelector ? " > " : " ") + elSelector;
+      }
   }
 
-  // if (!isUnique(selectors)) {
-  //   for (var i = selectors.length - 1; i >= 0; i--) {
-  //     var childIndex = [].indexOf.call(selectors[i].element.parentNode.children, selectors[i].element);
-  //
-  //     selectors[i].selector = selectors[i].selector + ':nth-child(' + (childIndex + 1) + ')';
-  //
-  //     if (isUnique(selectors)) {
-  //       break;
-  //     }
-  //   }
-  // }
-
-  var existingIndex = 0;
-  var items =  doc.querySelectorAll(mkSelectorString(selectors));
-
-  for (var i = 0; i < items.length; i++) {
-    if (items[i] === el) {
-      existingIndex = i;
-      break;
-    }
+  var finalSelectors = [];
+  if (ancestorSelector) {
+    finalSelectors.push(
+      ancestorSelector + ":eq(" + _getSelectorIndex(el, ancestorSelector) + ")"
+    );
   }
 
-  return mkSelectorString(selectors) + ":eq(" + existingIndex + ")";
+  finalSelectors.push(elSelector + ":eq(" + _getSelectorIndex(el, elSelector) + ")");
+  return finalSelectors;
 };
 
 /**
@@ -87,7 +86,7 @@ function getClassNames(el) {
 * @api prviate
 */
 
-function getSelectors(el, isUnique) {
+function getElementSelector(el, isUnique) {
   var parts = [];
   var label = null;
   var title = null;
@@ -145,7 +144,7 @@ function getSelectors(el, isUnique) {
   if (!parts.length) {
     throw new Error('Failed to identify CSS selector');
   }
-  return parts;
+  return parts[0];
 }
 
 module.exports = unique;

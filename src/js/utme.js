@@ -1,6 +1,6 @@
 var _ = require('./utils');
 var Promise = require('es6-promise').Promise;
-var Simulate = require('./Simulate');
+var Simulate = require('./simulate');
 var selectorFinder = require('./selectorFinder');
 var Settings = require('./settings');
 
@@ -133,6 +133,17 @@ function runStep(scenario, idx, toSkip) {
                 search += (search ? "&" : "?") + "utme_test_server=" + testServer;
             }
             window.location.replace(location + search + hash);
+
+            console.log((location.protocol + location.host + location.search));
+            console.log((step.data.url.protocol + step.data.url.host + step.data.url.search));
+
+            // If we have not changed the actual location, then the location.replace
+            // will not go anywhere
+            if ((location.protocol + location.host + location.search) ===
+                (step.data.url.protocol + step.data.url.host + step.data.url.search)) {
+                runNextStep(scenario, idx, toSkip, 0);
+            }
+
         } else if (step.eventName == 'timeout') {
             if (state.autoRun) {
                 runNextStep(scenario, idx, toSkip, step.data.amount);
@@ -381,17 +392,6 @@ function fragmentFromString(strHTML) {
     return temp.content ? temp.content : temp;
 }
 
-function postProcessSteps(steps) {
-    for (var i = 0; i < steps.length; i++) {
-        var step = steps[i];
-        var locator = step && step.data.locator;
-        var selector = locator && locator.selectors[0];
-        if (selector && selector.doc) {
-            utme.finalizeLocator(locator);
-        }
-    }
-}
-
 function getUniqueIdFromStep(step) {
     return step && step.data && step.data.locator && step.data.locator.uniqueId;
 }
@@ -518,27 +518,16 @@ var utme = {
         var eleHtml = element.cloneNode().outerHTML;
         var eleSelectors = [];
         if (element.tagName.toUpperCase() == 'BODY' || element.tagName.toUpperCase() == 'HTML') {
-            var eleSelectors = [element.tagName];
+            eleSelectors = [element.tagName];
         } else {
-            var docHtml = document.body.innerHTML;
-            var eleSelectors = [{
-                doc: docHtml, //docHtml.substring(0, docHtml.indexOf(eleHtml) + eleHtml.length),
-                id: uniqueId,
-                ele: eleHtml
-            }];
+            eleSelectors = selectorFinder(element, document.body);
         }
         return {
             uniqueId: uniqueId,
             selectors: eleSelectors
         };
     },
-    finalizeLocator: function (locator) {
-        var selector = locator.selectors[0];
-        var frag = fragmentFromString(selector.doc);
-        var ele = frag.querySelectorAll('[data-unique-id=\'' + selector.id + '\']');
-        // var selectors = $(ele).selectorator().generate();
-        locator.selectors = [selectorFinder(ele[0], frag)];
-    },
+
     registerEvent: function (eventName, data, idx) {
         if (utme.isRecording() || utme.isValidating()) {
             if (typeof idx == 'undefined') {
@@ -607,9 +596,6 @@ var utme = {
             }
 
             if (newScenario.name) {
-
-                postProcessSteps(newScenario.steps);
-
                 state.scenarios.push(newScenario);
 
                 if (saveHandlers && saveHandlers.length) {
