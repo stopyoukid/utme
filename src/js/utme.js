@@ -181,6 +181,9 @@ function runStep(scenario, idx, toSkip) {
                 tryUntilFound(scenario, step, locator, getTimeout(scenario, idx)).then(function (eles) {
 
                   var ele = eles[0];
+                  var tagName = ele.tagName.toLowerCase();
+                  var supportsInputEvent = tagName === 'input' || tagName === 'textarea' || ele.getAttribute('contenteditable');
+
                   if (events.indexOf(step.eventName) >= 0) {
                     var options = {};
                     if (step.data.button) {
@@ -199,7 +202,7 @@ function runStep(scenario, idx, toSkip) {
                     if (typeof step.data.value != "undefined") {
                       ele.value = step.data.value;
                       // For browsers that support the input event.
-                      if (ele.tagName.toLowerCase() === 'input') {
+                      if (supportsInputEvent) {
                         Simulate.event(ele, 'input');
                       }
                       Simulate.event(ele, 'change'); // This should be fired after a blur event.
@@ -215,6 +218,9 @@ function runStep(scenario, idx, toSkip) {
                     Simulate.event(ele, 'change');
 
                     Simulate.keyup(ele, key);
+                    if (supportsInputEvent) {
+                        Simulate.event(ele, 'input');
+                    }
                   }
 
                   if (step.eventName == 'validate') {
