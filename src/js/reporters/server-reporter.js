@@ -1,10 +1,14 @@
 var utme = require('../utme.js');
+
+function getBaseURL () {
+  return utme.state && utme.state.testServer ? utme.state.testServer : getParameterByName("utme_test_server") || "http://0.0.0.0:9043/";
+}
+
 var serverReporter = {
-    baseUrl: getParameterByName("utme_test_server") || "http://0.0.0.0:9043/",
     error: function (error, scenario, utme) {
         $.ajax({
           type: "POST",
-          url: serverReporter.baseUrl + "error",
+          url: getBaseURL() + "error",
           data: { data: error },
           dataType: "json"
         });
@@ -15,7 +19,7 @@ var serverReporter = {
     success: function (success, scenario, utme) {
         $.ajax({
           type: "POST",
-          url: serverReporter.baseUrl + "success",
+          url: getBaseURL() + "success",
           data: { data: success },
           dataType: "json"
         });
@@ -26,7 +30,7 @@ var serverReporter = {
     log: function (log, scenario, utme) {
         $.ajax({
           type: "POST",
-          url:  serverReporter.baseUrl + "log",
+          url:  getBaseURL() + "log",
           data: { data: log },
           dataType: "json"
         });
@@ -43,7 +47,7 @@ var serverReporter = {
 
             crossDomain: true,
 
-            url:  serverReporter.baseUrl + "scenario/" + name,
+            url:  getBaseURL() + "scenario/" + name,
 
             // tell jQuery we're expecting JSONP
             dataType: "jsonp",
@@ -57,7 +61,7 @@ var serverReporter = {
     saveScenario: function (scenario) {
         $.ajax({
           type: "POST",
-          url: serverReporter.baseUrl + "scenario",
+          url: getBaseURL() + "scenario",
           data: JSON.stringify(scenario, null, " "),
           dataType: 'json',
           contentType: "application/json"
@@ -68,7 +72,7 @@ var serverReporter = {
         $.ajax({
             contentType: "text/plan; charset=utf-8",
             crossDomain: true,
-            url:  serverReporter.baseUrl + "settings",
+            url:  getBaseURL() + "settings",
             // tell jQuery we're expecting JSONP
             dataType: "json",
 

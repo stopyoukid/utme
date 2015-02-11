@@ -125,22 +125,23 @@ function runStep(scenario, idx, toSkip) {
         state.run.scenario = scenario;
         state.run.stepIndex = idx;
         if (step.eventName == 'load') {
+            var newLocation = step.data.url.protocol + "//" + step.data.url.host;
             var search = step.data.url.search;
             var hash = step.data.url.hash;
-            var testServer = getParameterByName("utme_test_server");
-            if (testServer) {
-                search += (search ? "&" : "?") + "utme_test_server=" + testServer;
+
+            if (search && !search.charAt("?")) {
+                search = "?" + search;
             }
-            window.location.replace(location + search + hash);
+            var isSameURL = (location.protocol + "//" + location.host + location.search) === (newLocation + search);
+            window.location.replace(newLocation + hash + search);
 
             console.log((location.protocol + location.host + location.search));
             console.log((step.data.url.protocol + step.data.url.host + step.data.url.search));
 
             // If we have not changed the actual location, then the location.replace
             // will not go anywhere
-            if ((location.protocol + location.host + location.search) ===
-                (step.data.url.protocol + step.data.url.host + step.data.url.search)) {
-                runNextStep(scenario, idx, toSkip, 0);
+            if (isSameURL) {
+                window.reload(true);
             }
 
         } else if (step.eventName == 'timeout') {
@@ -432,22 +433,23 @@ var utme = {
             if (scenario) {
                 localStorage.clear();
                 state = utme.state = utme.loadStateFromStorage();
-                    utme.broadcast('INITIALIZED');
-                    setTimeout(function () {
-                        state.autoRun = true;
+                utme.broadcast('INITIALIZED');
+                setTimeout(function () {
+                    state.testServer = getParameterByName("utme_test_server");
+                    state.autoRun = true;
 
-                        var runConfig = getParameterByName('utme_run_config');
-                        if (runConfig) {
-                            runConfig = JSON.parse(runConfig);
-                        }
-                        runConfig = runConfig || {};
-                        var speed = getParameterByName('utme_run_speed') || settings.get("runner.speed");
-                        if (speed) {
-                            runConfig.speed = speed;
-                        }
+                    var runConfig = getParameterByName('utme_run_config');
+                    if (runConfig) {
+                        runConfig = JSON.parse(runConfig);
+                    }
+                    runConfig = runConfig || {};
+                    var speed = getParameterByName('utme_run_speed') || settings.get("runner.speed");
+                    if (speed) {
+                        runConfig.speed = speed;
+                    }
 
-                        utme.runScenario(scenario, runConfig);
-                    }, 2000);
+                    utme.runScenario(scenario, runConfig);
+                }, 2000);
             } else {
                 state = utme.state = utme.loadStateFromStorage();
                 utme.broadcast('INITIALIZED');

@@ -1,4 +1,7 @@
 module.exports = function(grunt) {
+  var es6ify = require('es6ify');
+
+  es6ify.traceurOverrides = { sourceMaps: false };
 
   grunt.loadNpmTasks('grunt-contrib-uglify');
   grunt.loadNpmTasks('grunt-contrib-copy');
@@ -56,9 +59,21 @@ module.exports = function(grunt) {
           },
           build: {
             options: {
-              transform: ['reactify', 'es6ify'],
+              transform: ['reactify', es6ify],
               browserifyOptions: {
                   debug:true
+              },
+              // Convert absolute sourcemap filepaths to relative ones using mold-source-map.
+              postBundleCB: function(err, src, cb) {
+                  var through = require('through');
+                  var stream = through().pause().queue(src).end();
+                  var buffer = '';
+                  stream.pipe(require('mold-source-map').transformSourcesRelativeTo(__dirname)).pipe(through(function(chunk) {
+                      buffer += chunk.toString();
+                  }, function() {
+                      cb(err, buffer);
+                  }));
+                  stream.resume();
               }
             },
             files: [{
