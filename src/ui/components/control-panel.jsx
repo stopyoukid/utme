@@ -34,7 +34,7 @@ module.exports = React.createClass({
 
     renderButtons: function () {
         var utme = this.props.utme;
-        if (utme.isRecording()) {
+        if (utme.isRecording() || utme.isValidating()) {
             return this.renderRecorder();
         } else if (utme.isPlaying()) {
             return this.renderPlayer();
