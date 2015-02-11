@@ -125,7 +125,6 @@ function runStep(scenario, idx, toSkip) {
         state.run.scenario = scenario;
         state.run.stepIndex = idx;
         if (step.eventName == 'load') {
-            var location = step.data.url.protocol + "//" + step.data.url.host + "/";
             var search = step.data.url.search;
             var hash = step.data.url.hash;
             var testServer = getParameterByName("utme_test_server");
@@ -234,8 +233,13 @@ function runStep(scenario, idx, toSkip) {
                     if (step.eventName == 'validate') {
                       utme.reportLog("Validate: " + result);
                       utme.stopScenario(false);
+                    } else if (isImportantStep(step)) {
+                        utme.reportError("Failed on step: " + idx + "  Event: " + step.eventName + " Reason: " + result);
+                        utme.stopScenario(false);
                     } else {
-                      utme.reportLog(result);
+                      if (settings.get('verbose')) {
+                        utme.reportLog(result);
+                      }
                       if (state.autoRun) {
                         runNextStep(scenario, idx, toSkip);
                       }
@@ -272,7 +276,10 @@ function waitForAngular(rootSelector) {
 function isImportantStep(step) {
     return step.eventName != 'mouseleave' &&
            step.eventName != 'mouseout' &&
-           step.eventName != 'blur';
+           step.eventName != 'mouseenter' &&
+           step.eventName != 'mouseover' &&
+           step.eventName != 'blur' &&
+           step.eventName != 'focus';
 }
 
 /**
@@ -434,7 +441,7 @@ var utme = {
                             runConfig = JSON.parse(runConfig);
                         }
                         runConfig = runConfig || {};
-                        var speed = getParameterByName('utme_run_speed');
+                        var speed = getParameterByName('utme_run_speed') || settings.get("runner.speed");
                         if (speed) {
                             runConfig.speed = speed;
                         }
@@ -507,9 +514,10 @@ var utme = {
         utme.reportLog("Stopping Scenario");
         if (scenario) {
             if (success) {
-                utme.reportLog("[SUCCESS] Scenario '" + scenario.name + "' Completed!");
+                utme.reportSuccess("[SUCCESS] Scenario '" + scenario.name + "' Completed!");
             } else {
-                utme.reportError("[FAILURE] Scenario '" + scenario.name + "' Completed!");
+                utme.reportLog("Stopping on page " + window.location.href);
+                utme.reportError("[FAILURE] Scenario '" + scenario.name + "' Stopped!");
             }
         }
     },
@@ -558,6 +566,13 @@ var utme = {
         if (reportHandlers && reportHandlers.length) {
             for (var i = 0; i < reportHandlers.length; i++) {
                 reportHandlers[i].error(error, scenario, utme);
+            }
+        }
+    },
+    reportSuccess: function (message, scenario) {
+        if (reportHandlers && reportHandlers.length) {
+            for (var i = 0; i < reportHandlers.length; i++) {
+                reportHandlers[i].success(message, scenario, utme);
             }
         }
     },
@@ -620,7 +635,7 @@ var utme = {
     },
 
     loadSettings: function () {
-        var settings = utme.settings = new Settings();
+        settings = utme.settings = new Settings();
         if (settingsLoadHandlers.length > 0 && !getParameterByName('utme_scenario')) {
             return new Promise(function (resolve, reject) {
                 settingsLoadHandlers[0](function (resp) {

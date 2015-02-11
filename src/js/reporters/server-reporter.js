@@ -8,7 +8,20 @@ var serverReporter = {
           data: { data: error },
           dataType: "json"
         });
-        console.error(error);
+        if (utme.settings.get("consoleLogging")) {
+          console.error(error);
+        }
+    },
+    success: function (success, scenario, utme) {
+        $.ajax({
+          type: "POST",
+          url: serverReporter.baseUrl + "success",
+          data: { data: success },
+          dataType: "json"
+        });
+        if (utme.settings.get("consoleLogging")) {
+          console.log(success);
+        }
     },
     log: function (log, scenario, utme) {
         $.ajax({
@@ -17,7 +30,9 @@ var serverReporter = {
           data: { data: log },
           dataType: "json"
         });
-        console.log(log);
+        if (utme.settings.get("consoleLogging")) {
+          console.log(log);
+        }
     },
 
     loadScenario: function (name, callback) {
