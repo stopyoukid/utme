@@ -56,7 +56,10 @@ module.exports = function(grunt) {
           },
           build: {
             options: {
-              transform: ['reactify', 'es6ify']
+              transform: ['reactify', 'es6ify'],
+              browserifyOptions: {
+                  debug:true
+              }
             },
             files: [{
               'build/js/utme.js': ['src/**/*.js']
