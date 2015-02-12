@@ -5,34 +5,41 @@ var Button = bs.Button;
 var Glyphicon = bs.Glyphicon;
 
 var createScenarioModal = require('./modals/create-scenario-modal.jsx');
-var settingsModal = require('./modals/settings-modal.jsx');
+var settingsModal = require('./settings/settings-modal.jsx');
 
-module.exports = React.createClass({
+var ControlPanel = React.createClass({
+
 
     propTypes: {
         utme: React.PropTypes.object.isRequired
     },
 
-    componentDidMount: function () {
+    getInitialState () {
+        return {
+            disablePanel: false
+        };
+    },
+
+    componentDidMount () {
         var self = this;
         this.props.utme.registerListener(function(eventName) {
             self.forceUpdate();
         });
     },
 
-    componentWillUnmount: function () {
+    componentWillUnmount () {
         // Should unregister event.
     },
 
-    render: function () {
+    render () {
         return (
-            <div data-ignore="true">
+            <div>
                 { this.renderButtons() }
             </div>
         );
     },
 
-    renderButtons: function () {
+    renderButtons () {
         var utme = this.props.utme;
         if (utme.isRecording() || utme.isValidating()) {
             return this.renderRecorder();
@@ -42,59 +49,62 @@ module.exports = React.createClass({
         return this.renderDefault();
     },
 
-    renderDefault: function () {
+    renderDefault () {
         return (
-            <ButtonGroup data-ignore="true" bsSize="small">
-                <Button ref="settingsButton" onClick={this.showSettings} data-ignore="true">
+            <ButtonGroup bsSize="small">
+                <Button ref="settingsButton" onClick={this.showSettings} disabled={ this.state.disablePanel }>
                     <Glyphicon glyph="cog"/>
                 </Button>
-                <Button ref="recordButton" onClick={this.recordScenario} data-ignore="true">
+                <Button ref="recordButton" onClick={this.recordScenario} disabled={ this.state.disablePanel }>
                     <span>{ '\u2B24' }</span>
                 </Button>
-                <Button ref="runButton" onClick={this.runScenario} data-ignore="true">
+                <Button ref="runButton" onClick={this.runScenario} disabled={ this.state.disablePanel }>
                     <Glyphicon glyph="play"/>
                 </Button>
             </ButtonGroup>
         );
     },
 
-    renderRecorder: function () {
+    renderRecorder () {
         return (
-            <ButtonGroup data-ignore="true" bsSize="small">
-                <Button ref="timeoutButton" onClick={this.addTimeout} data-ignore="true">
+            <ButtonGroup bsSize="small">
+                <Button ref="timeoutButton" onClick={this.addTimeout} disabled={ this.state.disablePanel }>
                     <Glyphicon glyph="time"/>
                 </Button>
-                <Button ref="stopButton" onClick={this.recordScenario} data-ignore="true">
+                <Button ref="stopButton" onClick={this.recordScenario} disabled={ this.state.disablePanel }>
                     <Glyphicon style={ {color: 'red'} } glyph="stop"/>
                 </Button>
-                <Button ref="validateButton" onClick={this.validate} data-ignore="true">
-                    <Glyphicon glyph='ok-sign' style={this.props.utme.isValidating() ? { color: 'green' } : {} }/>
+                <Button ref="validateButton" onClick={this.validate} disabled={ this.state.disablePanel }>
+                    <Glyphicon glyph='ok-sign' style={this.props.utme.isValidating() ? { color: 'green' } : {} } />
                 </Button>
             </ButtonGroup>
         );
     },
 
-    renderPlayer: function () {
+    renderPlayer () {
         return (
-            <ButtonGroup data-ignore="true" bsSize="small">
-                <Button ref="stopButton" onClick={this.stopScenario} data-ignore="true">
+            <ButtonGroup bsSize="small">
+                <Button ref="stopButton" onClick={this.runScenario} disabled={ this.state.disablePanel }>
                     <Glyphicon glyph="stop"/>
                 </Button>
-                <Button ref="pauseButton" onClick={this.pauseScenario} data-ignore="true">
+                <Button ref="pauseButton" onClick={this.pauseScenario} disabled={ this.state.disablePanel }>
                     <Glyphicon glyph={this.props.utme.state.autoRun ? 'pause' : 'play'}/>
                 </Button>
-                <Button ref="stepButton" onClick={this.step} data-ignore="true" disabled={this.props.utme.isPlaying()}>
+                <Button ref="stepButton" onClick={this.step} disabled={ this.props.utme.isPlaying() || this.state.disablePanel }>
                     <Glyphicon glyph="step-forward"/>
                 </Button>
             </ButtonGroup>
         );
     },
 
-    showSettings: function () {
-        settingsModal.open({ settings: this.props.utme.settings });
+    showSettings (e) {
+        this.setState({ disablePanel: true });
+        settingsModal.open({ settings: this.props.utme.settings }).then(() => {
+            this.setState({ disablePanel: false });
+        });
     },
 
-    recordScenario: function () {
+    recordScenario () {
         var utme = this.props.utme;
         if (utme.isRecording() || utme.isValidating()) {
             if (utme.isValidating()) {
@@ -112,7 +122,7 @@ module.exports = React.createClass({
         }
     },
 
-    addTimeout: function () {
+    addTimeout () {
         var utme = this.props.utme;
         if (utme.isRecording()) {
             utme.registerEvent('timeout', {
@@ -121,7 +131,7 @@ module.exports = React.createClass({
         }
     },
 
-    validate: function () {
+    validate () {
         var utme = this.props.utme;
         var isValidating = utme.isValidating();
         if (utme.isRecording() || isValidating) {
@@ -132,7 +142,7 @@ module.exports = React.createClass({
         }
     },
 
-    runScenario: function () {
+    runScenario () {
         var utme = this.props.utme;
         if (!(utme.isRecording() || utme.isPlaying() || utme.isValidating())) {
             utme.runScenario();
@@ -141,14 +151,17 @@ module.exports = React.createClass({
         }
     },
 
-    pauseScenario: function (e) {
+    pauseScenario (e) {
         var utme = this.props.utme;
         utme.state.autoRun = !utme.state.autoRun;
+        this.forceUpdate();
     },
 
-    step: function (e) {
+    step (e) {
         var utme = this.props.utme;
         utme.runNextStep(utme.state.runningScenario, utme.state.runningStep);
     }
 
 });
+
+module.exports = ControlPanel;
