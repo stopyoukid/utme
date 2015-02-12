@@ -5,10 +5,10 @@ var body = require('../../body');
 module.exports = function (modalComponent) {
     return {
         open: function (params) {
-            return new Promise(function (resolve, reject) {
+            return new Promise((resolve) => {
                 var element = body.appendComponent(modalComponent, _.extend({
 
-                    onClose: function (results) {
+                    onClose: (results) => {
                         setTimeout(function () {
                             body.remove(element);
                             resolve(results);
@@ -16,7 +16,7 @@ module.exports = function (modalComponent) {
                     }
 
                 }, params));
-            })['catch'](function (e) {
+            })['catch']((e) => {
                 throw e;
             });
         }
