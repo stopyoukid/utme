@@ -1,4 +1,7 @@
 var assert = require("assert")
+var fs = require('fs');
+require('better-require')('json');
+
 describe('Utme Tests', function(){
   var jsdom = require('mocha-jsdom');
   jsdom();
@@ -206,32 +209,26 @@ describe('Utme Tests', function(){
   });
 
   describe('run scenario', function () {
-    var singleClickScenario = {
-      steps: [{
-        eventName: 'mousedown',
-        data: {
-            locator: {
-                uniqueId: '1',
-                selectors: [
-                  'div'
-                ]
-            }
-        }
-      }]
-    };
 
     it ('load a scenario when runScenario is called', function () {
         utme.runScenario('whatever', function(name, callback) {
-            callback(singleClickScenario);
+          var test = require('./scenarios/ElementWithClick');
+          callback(test.scenario);
         });
     });
 
     it ('successfully complete with a single step', function (done) {
+      var elements = $("<div></div>");
+      elements.appendTo(document.body);
+
       utme.registerReportHandler({
           log: function (txt) {
               if (txt.indexOf("Completed") >= 0) {
                   done();
               }
+          },
+          success: function() {
+              done();
           },
           error: function (txt) {
               console.log(txt);
@@ -239,20 +236,84 @@ describe('Utme Tests', function(){
       });
 
       utme.registerLoadHandler(function (name, callback) {
-          callback(singleClickScenario);
+        var test = require('./scenarios/ElementWithClick');
+        callback(test.scenario);
       });
 
       utme.runScenario('whatever');
     });
 
-    it ('fire click event on element', function (done) {
-      var elements = $("<div></div>");
+    // Run all of the test scenarios
+    var testScenarios = fs.readdirSync(__dirname + '/scenarios');
+    testScenarios.forEach(function (file) {
+      var test = require('./scenarios/' + file);
+      it (test.test, function (done) {
+        var isDone = false;
+        var elements = $(test.html);
+        elements.appendTo(document.body);
+
+        var expects = (test.expect || []).slice(0);
+        // We expect a set of elements to have events fired upon them
+        if (test.expect && test.expect.length > 0) {
+          var lastExpectedRunIdx = -1;
+          expects.forEach(function (expect, i) {
+            $('body ' + expect.selector).on(expect.event, function() {
+              if (expects[0] != expect) {
+                isDone = true;
+                done("Events firing out of order, got " + expect.event + " on " + expect.selector);
+              } else {
+                expects.splice(0, 1);
+              }
+            });
+          });
+
+        // We expect NO elements to have any events
+        } else {
+          $('body *').on('click mousedown mouseup mouseout mouseover mouseenter mouseleave', function () {
+            isDone = true;
+            done("No events should be run");
+          });
+        }
+
+        utme.registerReportHandler({
+            log: function (txt) { },
+            success: function() {
+              if (!isDone && expects.length == 0) {
+                isDone = true;
+                done();
+              }
+            },
+            error: function (txt) { }
+        });
+
+        utme.registerLoadHandler(function (name, callback) {
+          callback(test.scenario);
+        });
+
+        utme.runScenario('whatever');
+      });
+    });
+
+    it ('should not fire events on elements that have no important events, inside of ones that do', function (done) {
+      var elements = $("<div><span><span></div>");
       elements.appendTo(document.body);
 
-      $('div').on('mousedown', done);
+      var badCount = 0;
+      var goodCount = 0;
+      $('div').on('mouseenter mouseout mouseover mouseleave', function() {
+        goodCount++;
+        if (goodCount === 4 && badCount === 0) {
+          done();
+        }
+      });
+
+      $('span').on('mouseenter mouseout mouseover mouseleave', function() {
+        badCount++;
+      });
 
       utme.registerLoadHandler(function (name, callback) {
-        callback(singleClickScenario);
+        var test = require('./scenarios/NonImportantElementInsideImportantElement');
+        callback(test.scenario);
       });
 
       utme.runScenario('whatever');

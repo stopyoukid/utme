@@ -287,10 +287,18 @@ function isImportantStep(step) {
  * Returns true if the given step is some sort of user interaction
  */
 function isInteractiveStep(step) {
-    return
-      otherStep.eventName.indexOf("mouse") !== 0 ||
-      otherStep.eventName.indexOf("mousedown") === 0 ||
-      otherStep.eventName.indexOf("mouseup") === 0;
+    var evt = step.eventName;
+
+    /*
+       // Interesting note, doing the following was causing this function to return undefined.
+       return
+           evt.indexOf("mouse") !== 0 ||
+           evt.indexOf("mousedown") === 0 ||
+           evt.indexOf("mouseup") === 0;
+
+       // Its because the conditions were not on the same line as the return statement
+    */
+    return evt.indexOf("mouse") !== 0 || evt.indexOf("mousedown") === 0 || evt.indexOf("mouseup") === 0;
 }
 
 function tryUntilFound(scenario, step, locator, timeout, textToCheck) {

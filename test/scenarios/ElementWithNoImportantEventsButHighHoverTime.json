@@ -1,0 +1,70 @@
+{
+  "test": "fire non important events when the user has interacted with the element for a long time",
+  "description": "This is useful for hover behaviors, menus that show up on hover",
+  "scenario": {
+    "steps": [{
+      "eventName": "mouseenter",
+      "timeStamp": 0,
+      "data": {
+        "locator": {
+          "uniqueId": "1",
+          "selectors": [
+            "div"
+          ]
+        }
+      }
+    },
+    {
+      "eventName": "mouseover",
+      "timeStamp": 10,
+      "data": {
+        "locator": {
+          "uniqueId": "1",
+          "selectors": [
+            "div"
+          ]
+        }
+      }
+    },
+    {
+      "eventName": "mouseout",
+      "timeStamp": 4000,
+      "data": {
+        "locator": {
+          "uniqueId": "1",
+          "selectors": [
+            "div"
+          ]
+        }
+      }
+    },
+    {
+      "eventName": "mouseleave",
+      "timeStamp": 4010,
+      "data": {
+        "locator": {
+          "uniqueId": "1",
+          "selectors": [
+            "div"
+          ]
+        }
+      }
+    }]
+  },
+  "html": "<div></div>",
+  "expect": [{
+    "selector": "div",
+    "event": "mouseenter"
+  },{
+    "selector": "div",
+    "event": "mouseover"
+
+  },{
+    "selector": "div",
+    "event": "mouseout"
+
+  },{
+    "selector": "div",
+    "event": "mouseleave"
+  }]
+}
