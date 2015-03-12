@@ -60,7 +60,9 @@ function getPreconditions (scenario) {
         return Promise.all(_.map(scenarios, function (scenarioName) {
             return getScenario(scenarioName).then(function (otherScenario) {
               otherScenario = JSON.parse(JSON.stringify(otherScenario));
-              return otherScenario.steps;
+              return setupConditions(otherScenario).then(function () {
+                return otherScenario.steps;
+              });
             });
         }));
     } else {
@@ -76,7 +78,9 @@ function getPostconditions (scenario) {
         return Promise.all(_.map(scenarios, function (scenarioName) {
             return getScenario(scenarioName).then(function (otherScenario) {
               otherScenario = JSON.parse(JSON.stringify(otherScenario));
-              return otherScenario.steps;
+              return setupConditions(otherScenario).then(function () {
+                return otherScenario.steps;
+              });
             });
         }));
     } else {

@@ -63,7 +63,7 @@ module.exports = {
             thisArg = obj;
         }
         while (key < len) {
-            newArray[key] = callback.call(thisArg, this[key], key, obj);
+            newArray[key] = callback.call(thisArg, obj[key], key, obj);
             key++;
         }
         return newArray;

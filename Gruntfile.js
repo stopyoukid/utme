@@ -9,6 +9,7 @@ module.exports = function(grunt) {
   grunt.loadNpmTasks('grunt-contrib-concat');
   grunt.loadNpmTasks('grunt-browserify');
   grunt.loadNpmTasks('grunt-contrib-less');
+  grunt.loadNpmTasks('grunt-mocha-test');
 
   grunt.initConfig({
       copy: {
@@ -83,6 +84,11 @@ module.exports = function(grunt) {
             }]
           }
       },
+      mochaTest: {
+        test: {
+          src: ['test/**/*.js'],
+        },
+      },
       watch: {
         options: {
             atBegin: true
@@ -121,7 +127,7 @@ module.exports = function(grunt) {
   });
 
   grunt.registerTask('default', ['watch']);
-  grunt.registerTask('build', ['browserify:build', 'uglify:build', 'less:buildBootstrap', 'less:build', 'copy']);
+  grunt.registerTask('build', ['mochaTest', 'browserify:build', 'uglify:build', 'less:buildBootstrap', 'less:build', 'copy']);
   grunt.registerTask('debugBuild', ['browserify:build', 'copy']);
 
 };

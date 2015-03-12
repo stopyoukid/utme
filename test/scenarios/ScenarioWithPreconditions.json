@@ -1,0 +1,20 @@
+{
+  "scenario": {
+    "steps": [{
+      "eventName": "click",
+      "data": {
+        "locator": {
+          "uniqueId": "1",
+          "selectors": [
+            "div"
+          ]
+        }
+      }
+    }],
+    "setup": {
+      "scenarios": [
+        "setup-scenario"
+      ]
+    }
+  }
+}

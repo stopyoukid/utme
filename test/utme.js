@@ -243,55 +243,80 @@ describe('Utme Tests', function(){
       utme.runScenario('whatever');
     });
 
+    it ('should load preconditions properly', function (done) {
+      var elements = $("<div></div>");
+      elements.appendTo(document.body);
+
+      var isDone = false;
+      utme.registerLoadHandler(function (name, callback) {
+        if (!name) {
+          done("Not loading preconditions properly")
+          isDone = true;
+        } else if (name == 'whatever') {
+          var test = require('./scenarios/ScenarioWithPreconditions');
+          callback(test.scenario);
+        } else {
+          done();
+          isDone = true;
+        }
+      });
+
+      utme.runScenario('whatever');
+    });
+
     // Run all of the test scenarios
     var testScenarios = fs.readdirSync(__dirname + '/scenarios');
     testScenarios.forEach(function (file) {
       var test = require('./scenarios/' + file);
-      it (test.test, function (done) {
-        var isDone = false;
-        var elements = $(test.html);
-        elements.appendTo(document.body);
 
-        var expects = (test.expect || []).slice(0);
-        // We expect a set of elements to have events fired upon them
-        if (test.expect && test.expect.length > 0) {
-          var lastExpectedRunIdx = -1;
-          expects.forEach(function (expect, i) {
-            $('body ' + expect.selector).on(expect.event, function() {
-              if (expects[0] != expect) {
-                isDone = true;
-                done("Events firing out of order, got " + expect.event + " on " + expect.selector);
-              } else {
-                expects.splice(0, 1);
-              }
+      // It isn't an actual test
+      if (test.test) {
+        it (test.test, function (done) {
+          var isDone = false;
+          var elements = $(test.html);
+          elements.appendTo(document.body);
+
+          var expects = (test.expect || []).slice(0);
+          // We expect a set of elements to have events fired upon them
+          if (test.expect && test.expect.length > 0) {
+            var lastExpectedRunIdx = -1;
+            expects.forEach(function (expect, i) {
+              $('body ' + expect.selector).on(expect.event, function() {
+                if (expects[0] != expect) {
+                  isDone = true;
+                  done("Events firing out of order, got " + expect.event + " on " + expect.selector);
+                } else {
+                  expects.splice(0, 1);
+                }
+              });
             });
+
+          // We expect NO elements to have any events
+          } else {
+            $('body *').on('click mousedown mouseup mouseout mouseover mouseenter mouseleave', function () {
+              isDone = true;
+              done("No events should be run");
+            });
+          }
+
+          utme.registerReportHandler({
+              log: function (txt) { },
+              success: function() {
+                if (!isDone && expects.length == 0) {
+                  isDone = true;
+                  done();
+                }
+              },
+              error: function (txt) { }
           });
 
-        // We expect NO elements to have any events
-        } else {
-          $('body *').on('click mousedown mouseup mouseout mouseover mouseenter mouseleave', function () {
-            isDone = true;
-            done("No events should be run");
+          utme.registerLoadHandler(function (name, callback) {
+            callback(test.scenario);
           });
-        }
 
-        utme.registerReportHandler({
-            log: function (txt) { },
-            success: function() {
-              if (!isDone && expects.length == 0) {
-                isDone = true;
-                done();
-              }
-            },
-            error: function (txt) { }
+          utme.runScenario('whatever');
         });
-
-        utme.registerLoadHandler(function (name, callback) {
-          callback(test.scenario);
-        });
-
-        utme.runScenario('whatever');
-      });
+      }
     });
 
     it ('should not fire events on elements that have no important events, inside of ones that do', function (done) {
