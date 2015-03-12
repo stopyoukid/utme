@@ -141,7 +141,7 @@ function runStep(scenario, idx, toSkip) {
             // If we have not changed the actual location, then the location.replace
             // will not go anywhere
             if (isSameURL) {
-                window.reload(true);
+                window.location.reload(true);
             }
 
         } else if (step.eventName == 'timeout') {
