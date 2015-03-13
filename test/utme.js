@@ -206,15 +206,39 @@ describe('Utme Tests', function(){
           assert.equal(utme.state.steps[0].eventName,  'load');
           assert.equal(utme.state.steps[1].eventName,  'mouseenter');
       });
+
+      it ('should register "m" as the character when the "m" character is pressed', function () {
+        var elements = $("<div></div>");
+        elements.appendTo(document.body);
+
+        utme.eventListeners['keypress']({
+          target: elements[0],
+          which: 109
+        });
+
+        assert.equal(utme.state.steps.length,  2);
+        assert.equal(utme.state.steps[1].eventName,  'keypress');
+        assert.equal(utme.state.steps[1].data.key,  'm');
+      });
   });
 
   describe('run scenario', function () {
 
-    it ('load a scenario when runScenario is called', function () {
-        utme.runScenario('whatever', function(name, callback) {
+    it ('load a scenario when runScenario is called', function (done) {
+
+        var isDone = false;
+        utme.registerLoadHandler(function (name, callback) {
           var test = require('./scenarios/ElementWithClick');
-          callback(test.scenario);
+          done();
+          isDone = true;
         });
+
+        utme.runScenario('whatever', { speed: '10' });
+
+        if (!isDone) {
+          done("Load not called!");
+        }
+
     });
 
     it ('successfully complete with a single step', function (done) {
@@ -240,7 +264,7 @@ describe('Utme Tests', function(){
         callback(test.scenario);
       });
 
-      utme.runScenario('whatever');
+      utme.runScenario('whatever', { speed: '10' });
     });
 
     it ('should load preconditions properly', function (done) {
@@ -261,7 +285,7 @@ describe('Utme Tests', function(){
         }
       });
 
-      utme.runScenario('whatever');
+      utme.runScenario('whatever', { speed: '10' });
     });
 
     // Run all of the test scenarios
@@ -314,7 +338,7 @@ describe('Utme Tests', function(){
             callback(test.scenario);
           });
 
-          utme.runScenario('whatever');
+          utme.runScenario('whatever', { speed: '10' });
         });
       }
     });
@@ -341,7 +365,7 @@ describe('Utme Tests', function(){
         callback(test.scenario);
       });
 
-      utme.runScenario('whatever');
+      utme.runScenario('whatever', { speed: '10' });
     });
   });
 })

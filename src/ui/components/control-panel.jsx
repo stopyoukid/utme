@@ -6,9 +6,11 @@ var Glyphicon = bs.Glyphicon;
 
 var createScenarioModal = require('./modals/create-scenario-modal.jsx');
 var settingsModal = require('./settings/settings-modal.jsx');
+var UtmeMixin = require('./mixins/UtmeMixin');
 
 var ControlPanel = React.createClass({
 
+    mixins: [UtmeMixin],
 
     propTypes: {
         utme: React.PropTypes.object.isRequired

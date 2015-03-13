@@ -52,40 +52,34 @@ var events = [
     // 'scroll'
 ];
 
+function getConditions(scenario, conditionType) {
+  var setup = scenario[conditionType];
+  var scenarios = setup && setup.scenarios;
+  // TODO: Break out into helper
+  if (scenarios) {
+    return Promise.all(_.map(scenarios, function (scenarioName) {
+      return getScenario(scenarioName).then(function (otherScenario) {
+        otherScenario = JSON.parse(JSON.stringify(otherScenario));
+        return setupConditions(otherScenario).then(function () {
+          var toReturn = [];
+          for (var i = 0; i < otherScenario.steps.length; i++) {
+            toReturn.push(otherScenario.steps[i]);
+          }
+          return toReturn;
+        });
+      });
+    }));
+  } else {
+    return Promise.resolve([]);
+  }
+}
+
 function getPreconditions (scenario) {
-    var setup = scenario.setup;
-    var scenarios = setup && setup.scenarios;
-    // TODO: Break out into helper
-    if (scenarios) {
-        return Promise.all(_.map(scenarios, function (scenarioName) {
-            return getScenario(scenarioName).then(function (otherScenario) {
-              otherScenario = JSON.parse(JSON.stringify(otherScenario));
-              return setupConditions(otherScenario).then(function () {
-                return otherScenario.steps;
-              });
-            });
-        }));
-    } else {
-        return Promise.resolve([]);
-    }
+  return getConditions(scenario, 'setup');
 }
 
 function getPostconditions (scenario) {
-    var cleanup = scenario.cleanup;
-    var scenarios = cleanup && cleanup.scenarios;
-    // TODO: Break out into helper
-    if (scenarios) {
-        return Promise.all(_.map(scenarios, function (scenarioName) {
-            return getScenario(scenarioName).then(function (otherScenario) {
-              otherScenario = JSON.parse(JSON.stringify(otherScenario));
-              return setupConditions(otherScenario).then(function () {
-                return otherScenario.steps;
-              });
-            });
-        }));
-    } else {
-        return Promise.resolve([]);
-    }
+  return getConditions(scenario, 'cleanup');
 }
 
 function _concatScenarioStepLists(steps) {
@@ -215,8 +209,8 @@ function runStep(scenario, idx, toSkip) {
 
                   if (step.eventName == 'keypress') {
                     var key = String.fromCharCode(step.data.keyCode);
-                    Simulate.keypress(ele, key);
                     Simulate.keydown(ele, key);
+                    Simulate.keypress(ele, key);
 
                     ele.value = step.data.value;
                     Simulate.event(ele, 'change');
@@ -422,6 +416,19 @@ function getUniqueIdFromStep(step) {
     return step && step.data && step.data.locator && step.data.locator.uniqueId;
 }
 
+function filterExtraLoads(steps) {
+  var result = [];
+  var seenLoad = false;
+  for (var i = 0; i < steps.length; i++) {
+    var isLoad = steps[i].eventName === 'load';
+    if (!seenLoad || !isLoad) {
+      result.push(steps[i]);
+      seenLoad = seenLoad || isLoad;
+    }
+  }
+  return result;
+};
+
 var guid = (function () {
     function s4() {
         return Math.floor((1 + Math.random()) * 0x10000)
@@ -504,12 +511,14 @@ var utme = {
         return getScenario(toRun).then(function (scenario) {
             scenario = JSON.parse(JSON.stringify(scenario));
             utme.state.run = _.extend({
-                speed: '10'
+                speed: (settings && settings.get("runner.speed")) || "10"
             }, config);
 
             setupConditions(scenario).then(function () {
                 state.autoRun = autoRun === true;
                 state.status = "PLAYING";
+
+                scenario.steps = filterExtraLoads(scenario.steps);
 
                 utme.reportLog("Starting Scenario '" + name + "'", scenario);
                 utme.broadcast('PLAYBACK_STARTED');
@@ -649,7 +658,9 @@ var utme = {
     },
 
     loadSettings: function () {
-        settings = utme.settings = new Settings();
+        settings = utme.settings = new Settings({
+          "runner.speed": "realtime"
+        });
         if (settingsLoadHandlers.length > 0 && !getParameterByName('utme_scenario')) {
             return new Promise(function (resolve, reject) {
                 settingsLoadHandlers[0](function (resp) {
@@ -718,7 +729,9 @@ function initEventHandlers() {
                 if (e.isTrigger)
                     return;
 
+                var setting = settings.get("recorder.events." + evt);
                 if (utme.isRecording() &&
+                    (setting === true || setting === 'true' || typeof setting === 'undefined') &&
                     e.target.hasAttribute &&
                     !e.target.hasAttribute('data-ignore') &&
                     $(e.target).parents("[data-ignore]").length == 0 &&
@@ -772,7 +785,7 @@ function initEventHandlers() {
 
     var _to_ascii = {
         '188': '44',
-        '109': '45',
+        '189': '45',
         '190': '46',
         '191': '47',
         '192': '96',
@@ -782,8 +795,7 @@ function initEventHandlers() {
         '219': '91',
         '173': '45',
         '187': '61', //IE Key codes
-        '186': '59', //IE Key codes
-        '189': '45' //IE Key codes
+        '186': '59'
     };
 
     var shiftUps = {

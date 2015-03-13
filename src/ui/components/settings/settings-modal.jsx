@@ -1,5 +1,6 @@
 var React = require('react');
 var bs = require('react-bootstrap');
+var HasSettingsMixin = require('../mixins/HasSettingsMixin');
 var Modal = bs.Modal;
 var Button = bs.Button;
 var TabPane = bs.TabPane;
@@ -8,13 +9,14 @@ var Input = bs.Input;
 var Grid = bs.Grid;
 var Col = bs.Col;
 var Row = bs.Row;
+var RunSettingsPane = require('./run-settings-pane.jsx');
 var modalLauncher = require('../modals/modal-launcher.jsx');
 var UtmeMixin = require('../mixins/UtmeMixin');
 
-var settingsNS = "recorder.events.";
-
 var CreateModal = React.createClass({
-    mixins: [UtmeMixin],
+    mixins: [UtmeMixin, HasSettingsMixin],
+
+    settingsNS:  "recorder.events.",
 
     propTypes: {
         settings: React.PropTypes.object.isRequired
@@ -34,12 +36,12 @@ var CreateModal = React.createClass({
                                             {this.renderSetting("checkbox", "Change", "change")}
                                             {this.renderSetting("checkbox", "Focus", "focus")}
                                             {this.renderSetting("checkbox", "Blur", "blur")}
-                                            {this.renderSetting("checkbox", "Click", "record-click")}
+                                            {this.renderSetting("checkbox", "Click", "click")}
                                             {this.renderSetting("checkbox", "Double Click", "dblclick")}
                                         </Col>
                                         <Col xs={6}>
                                             {this.renderSetting("checkbox", "Mouse Down", "mousedown")}
-                                            {this.renderSetting("checkbox", "Mouse Up", "mousedown")}
+                                            {this.renderSetting("checkbox", "Mouse Up", "mouseup")}
                                             {this.renderSetting("checkbox", "Mouse Enter", "mouseenter")}
                                             {this.renderSetting("checkbox", "Mouse Leave", "mouseleave")}
                                             {this.renderSetting("checkbox", "Mouse Over", "mouseover")}
@@ -49,7 +51,7 @@ var CreateModal = React.createClass({
                                 </Grid>
                             </TabPane>
                             <TabPane eventKey={2} tab="Running">
-                                beep
+                                <RunSettingsPane settings={this.props.settings}></RunSettingsPane>
                             </TabPane>
                             <TabPane eventKey={3} tab="Help">
 
@@ -63,49 +65,8 @@ var CreateModal = React.createClass({
                 </div>
             </Modal>
         );
-    },
-
-    renderSetting (type, label, relativeSettingskey) {
-        var self = this;
-        var settingsKey = settingsNS + relativeSettingskey;
-        if (type === 'checkbox' || type === 'radio') {
-            return (<Input type={type} label={label} checked={this.props.settings.get(settingsKey)} onChange={
-                function (e) { self.updateSetting(settingsKey, e.target.checked); }
-            }/>);
-        } else {
-            return (<Input type={type} label={label} value={this.props.settings.get(settingsKey)} onChange={
-                function (e) { self.updateSetting(settingsKey, e.target.value); }
-            }/>);
-        }
-    },
-
-    updateSetting (key, value) {
-        this.props.settings.set(key, value);
-    },
-
-    saveSettings (e) {
-        var scenarioName = this.refs.scenarioName.value;
-        var description = this.refs.description.value;
-        var setup = this.refs.setupScenarios.value;
-        var cleanup = this.refs.cleanupScenarios.value;
-
-        var info = {};
-        if (name) {
-          info.name = name;
-        }
-
-        if (description) {
-          info.description = description;
-        }
-
-        if (setup) {
-          info.setup = {
-              scenarios: setup.split("\n")
-          };
-        }
-
-        e.stopPropagation();
     }
+
 });
 
 module.exports = modalLauncher(CreateModal);

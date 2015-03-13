@@ -70,7 +70,8 @@ var serverReporter = {
 
     loadSettings: function (callback, error) {
         $.ajax({
-            contentType: "text/plan; charset=utf-8",
+            type: "GET",
+            contentType: "",
             crossDomain: true,
             url:  getBaseURL() + "settings",
             // tell jQuery we're expecting JSONP
