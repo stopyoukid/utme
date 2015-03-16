@@ -12,7 +12,7 @@ var serverReporter = {
           data: { data: error },
           dataType: "json"
         });
-        if (utme.settings.get("consoleLogging")) {
+        if (utme.state.settings.get("consoleLogging")) {
           console.error(error);
         }
     },
@@ -23,7 +23,7 @@ var serverReporter = {
           data: { data: success },
           dataType: "json"
         });
-        if (utme.settings.get("consoleLogging")) {
+        if (utme.state.settings.get("consoleLogging")) {
           console.log(success);
         }
     },
@@ -34,7 +34,7 @@ var serverReporter = {
           data: { data: log },
           dataType: "json"
         });
-        if (utme.settings.get("consoleLogging")) {
+        if (utme.state.settings.get("consoleLogging")) {
           console.log(log);
         }
     },

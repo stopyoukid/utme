@@ -101,7 +101,7 @@ var ControlPanel = React.createClass({
 
     showSettings (e) {
         this.setState({ disablePanel: true });
-        settingsModal.open({ settings: this.props.utme.settings }).then(() => {
+        settingsModal.open({ settings: this.props.utme.state.settings }).then(() => {
             this.setState({ disablePanel: false });
         });
     },
