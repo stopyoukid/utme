@@ -20,6 +20,10 @@ module.exports = {
         this.addIgnoreAttribute(element);
     },
 
+    toggleHighlight(element, value) {
+      $(element).toggleClass('utme-verify', value);
+    },
+
     /**
      * Adds an ignore attribute so it won't be recorded.
      */

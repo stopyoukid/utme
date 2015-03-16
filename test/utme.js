@@ -220,6 +220,19 @@ describe('Utme Tests', function(){
         assert.equal(utme.state.steps[1].eventName,  'keypress');
         assert.equal(utme.state.steps[1].data.key,  'm');
       });
+
+      it ('should record the checked property checkboxes, when change is fired', function () {
+        var elements = $("<input type='checkbox' checked='true'></div>");
+        elements.appendTo(document.body);
+
+        utme.eventListeners['change']({
+          target: elements[0]
+        });
+
+        assert.equal(utme.state.steps.length,  2);
+        assert.equal(utme.state.steps[1].eventName,  'change');
+        assert.equal(utme.state.steps[1].data.attributes.checked, true);
+      });
   });
 
   describe('run scenario', function () {
@@ -233,7 +246,7 @@ describe('Utme Tests', function(){
           isDone = true;
         });
 
-        utme.runScenario('whatever', { speed: '10' });
+        utme.runScenario('whatever');
 
         if (!isDone) {
           done("Load not called!");
@@ -264,7 +277,7 @@ describe('Utme Tests', function(){
         callback(test.scenario);
       });
 
-      utme.runScenario('whatever', { speed: '10' });
+      utme.runScenario('whatever');
     });
 
     it ('should load preconditions properly', function (done) {
@@ -285,7 +298,7 @@ describe('Utme Tests', function(){
         }
       });
 
-      utme.runScenario('whatever', { speed: '10' });
+      utme.runScenario('whatever');
     });
 
     // Run all of the test scenarios
@@ -338,7 +351,7 @@ describe('Utme Tests', function(){
             callback(test.scenario);
           });
 
-          utme.runScenario('whatever', { speed: '10' });
+          utme.runScenario('whatever');
         });
       }
     });
@@ -365,7 +378,7 @@ describe('Utme Tests', function(){
         callback(test.scenario);
       });
 
-      utme.runScenario('whatever', { speed: '10' });
+      utme.runScenario('whatever');
     });
   });
 })

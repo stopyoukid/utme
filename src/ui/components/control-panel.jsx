@@ -138,7 +138,7 @@ var ControlPanel = React.createClass({
         var isValidating = utme.isValidating();
         if (utme.isRecording() || isValidating) {
             if (isValidating) {
-                toggleHighlight($('.utme-verify'), false);
+                this.toggleHighlight($('.utme-verify'), false);
             }
             utme.isValidating(!isValidating);
         }

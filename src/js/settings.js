@@ -34,7 +34,7 @@ Settings.prototype = {
     save: function () {
         localStorage.setItem(local_storage_key, JSON.stringify(this.settings));
     },
-
+    
     resetDefaults: function () {
         var defaults = this.defaultSettings;
         if (defaults) {

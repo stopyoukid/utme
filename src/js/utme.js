@@ -133,8 +133,10 @@ function runStep(scenario, idx, toSkip) {
             var isSameURL = (location.protocol + "//" + location.host + location.search) === (newLocation + search);
             window.location.replace(newLocation + hash + search);
 
-            console.log((location.protocol + location.host + location.search));
-            console.log((step.data.url.protocol + step.data.url.host + step.data.url.search));
+            if (utme.state.settings.get("verbose")) {
+              console.log((location.protocol + location.host + location.search));
+              console.log((step.data.url.protocol + step.data.url.host + step.data.url.search));
+            }
 
             // If we have not changed the actual location, then the location.replace
             // will not go anywhere
@@ -152,7 +154,7 @@ function runStep(scenario, idx, toSkip) {
             var uniqueId = getUniqueIdFromStep(step);
 
             // try to get rid of unnecessary steps
-            if (typeof toSkip[uniqueId] == 'undefined' && utme.state.run.speed != 'realtime') {
+            if (typeof toSkip[uniqueId] == 'undefined' && utme.state.settings.get("runner.speed") != 'realtime') {
               var diff;
               var ignore = false;
               for (var j = steps.length - 1; j > idx; j--) {
@@ -176,8 +178,7 @@ function runStep(scenario, idx, toSkip) {
             if (toSkip[getUniqueIdFromStep(step)]) {
                 runNextStep(scenario, idx, toSkip);
             } else {
-                tryUntilFound(scenario, step, locator, getTimeout(scenario, idx)).then(function (eles) {
-
+                findElementWithLocator(scenario, step, locator, getTimeout(scenario, idx)).then(function (eles) {
                   var ele = eles[0];
                   var tagName = ele.tagName.toLowerCase();
                   var supportsInputEvent = tagName === 'input' || tagName === 'textarea' || ele.getAttribute('contenteditable');
@@ -197,8 +198,9 @@ function runStep(scenario, idx, toSkip) {
                       Simulate[step.eventName](ele, options);
                     }
 
-                    if (typeof step.data.value != "undefined") {
-                      ele.value = step.data.value;
+                    if (typeof step.data.value != "undefined" || typeof step.data.attributes != "undefined") {
+                      var toApply = step.data.attributes ? step.data.attributes : { "value": step.data.value };
+                      _.extend(ele, toApply);
                       // For browsers that support the input event.
                       if (supportsInputEvent) {
                         Simulate.event(ele, 'input');
@@ -221,7 +223,7 @@ function runStep(scenario, idx, toSkip) {
                     }
                   }
 
-                  if (step.eventName == 'validate') {
+                  if (step.eventName == 'validate' && utme.state.settings.get('verbose')) {
                     utme.reportLog('Validate: ' + JSON.stringify(locator.selectors)  + " contains text '"  + step.data.text + "'");
                   }
 
@@ -236,7 +238,7 @@ function runStep(scenario, idx, toSkip) {
                         utme.reportError("Failed on step: " + idx + "  Event: " + step.eventName + " Reason: " + result);
                         utme.stopScenario(false);
                     } else {
-                      if (settings.get('verbose')) {
+                      if (utme.state.settings.get('verbose')) {
                         utme.reportLog(result);
                       }
                       if (state.autoRun) {
@@ -299,7 +301,7 @@ function isInteractiveStep(step) {
     return evt.indexOf("mouse") !== 0 || evt.indexOf("mousedown") === 0 || evt.indexOf("mouseup") === 0;
 }
 
-function tryUntilFound(scenario, step, locator, timeout, textToCheck) {
+function findElementWithLocator(scenario, step, locator, timeout, textToCheck) {
     var started;
     return new Promise(function (resolve, reject) {
         function tryFind() {
@@ -359,24 +361,25 @@ function tryUntilFound(scenario, step, locator, timeout, textToCheck) {
             }
         }
 
-        var limit = importantStepLength / (utme.state.run.speed == 'realtime' ? '1' : utme.state.run.speed);
+        var speed = utme.state.settings.get("runner.speed");
+        var limit = importantStepLength / (speed === 'realtime' ? '1' : speed);
         if (global.angular) {
             waitForAngular('[ng-app]').then(function() {
-              if (utme.state.run.speed === 'realtime') {
+              if (speed === 'realtime') {
                   setTimeout(tryFind, timeout);
-              } else if (utme.state.run.speed === 'fastest') {
+              } else if (speed === 'fastest') {
                   tryFind();
               } else {
-                  setTimeout(tryFind, Math.min(timeout * utme.state.run.speed, limit));
+                  setTimeout(tryFind, Math.min(timeout * speed, limit));
               }
             });
         } else {
-            if (utme.state.run.speed === 'realtime') {
+            if (speed === 'realtime') {
                 setTimeout(tryFind, timeout);
-            } else if (utme.state.run.speed === 'fastest') {
+            } else if (speed === 'fastest') {
                 tryFind();
             } else {
-                setTimeout(tryFind, Math.min(timeout * utme.state.run.speed, limit));
+                setTimeout(tryFind, Math.min(timeout * speed, limit));
             }
         }
     });
@@ -443,41 +446,30 @@ var guid = (function () {
 
 var listeners = [];
 var state;
-var settings;
 var utme = {
-    state: state,
     init: function () {
         var scenario = getParameterByName('utme_scenario');
+        if (scenario) {
+          localStorage.clear();
+        }
+        state = utme.state = utme.loadStateFromStorage();
+        utme.broadcast('INITIALIZED');
+
         return utme.loadSettings().then(function () {
-            if (scenario) {
-                localStorage.clear();
-                state = utme.state = utme.loadStateFromStorage();
-                utme.broadcast('INITIALIZED');
-                setTimeout(function () {
-                    state.testServer = getParameterByName("utme_test_server");
-                    state.autoRun = true;
-
-                    var runConfig = getParameterByName('utme_run_config');
-                    if (runConfig) {
-                        runConfig = JSON.parse(runConfig);
-                    }
-                    runConfig = runConfig || {};
-                    var speed = getParameterByName('utme_run_speed') || settings.get("runner.speed");
-                    if (speed) {
-                        runConfig.speed = speed;
-                    }
-
-                    utme.runScenario(scenario, runConfig);
-                }, 2000);
-            } else {
-                state = utme.state = utme.loadStateFromStorage();
-                utme.broadcast('INITIALIZED');
-                if (state.status === "PLAYING") {
-                    runNextStep(state.run.scenario, state.run.stepIndex);
-                } else if (!state.status || state.status === 'INITIALIZING') {
-                    state.status = "LOADED";
-                }
+          if (scenario) {
+            setTimeout(function () {
+              state.testServer = getParameterByName("utme_test_server");
+              state.autoRun = true;
+              utme.runScenario(scenario);
+            }, 100);
+          } else {
+            if (state.status === "PLAYING") {
+              runNextStep(state.run.scenario, state.run.stepIndex);
+            } else if (!state.status || state.status === 'INITIALIZING') {
+              state.status = "LOADED";
             }
+          }
+
         });
     },
     broadcast: function (evt, evtData) {
@@ -493,7 +485,6 @@ var utme = {
             state.steps = [];
             utme.reportLog("Recording Started");
             utme.broadcast('RECORDING_STARTED');
-
             utme.registerEvent("load", {
                 url: {
                     protocol: window.location.protocol,
@@ -510,17 +501,17 @@ var utme = {
         var autoRun = !name ? prompt('Would you like to step through each step (y|n)?') != 'y' : true;
         return getScenario(toRun).then(function (scenario) {
             scenario = JSON.parse(JSON.stringify(scenario));
-            utme.state.run = _.extend({
-                speed: (settings && settings.get("runner.speed")) || "10"
-            }, config);
-
             setupConditions(scenario).then(function () {
+                state.run = {};
                 state.autoRun = autoRun === true;
                 state.status = "PLAYING";
 
                 scenario.steps = filterExtraLoads(scenario.steps);
 
-                utme.reportLog("Starting Scenario '" + name + "'", scenario);
+                if (utme.state.settings.get("verbose")) {
+                  utme.reportLog("Starting Scenario '" + name + "'", scenario);
+                }
+
                 utme.broadcast('PLAYBACK_STARTED');
 
                 runStep(scenario, 0);
@@ -534,7 +525,9 @@ var utme = {
         state.status = "LOADED";
         utme.broadcast('PLAYBACK_STOPPED');
 
-        utme.reportLog("Stopping Scenario");
+        if (utme.state.settings.get("verbose")) {
+          utme.reportLog("Stopping Scenario");
+        }
         if (scenario) {
             if (success) {
                 utme.reportSuccess("[SUCCESS] Scenario '" + scenario.name + "' Completed!");
@@ -658,20 +651,20 @@ var utme = {
     },
 
     loadSettings: function () {
-        settings = utme.settings = new Settings({
-          "runner.speed": "realtime"
+        var settings = utme.state.settings = utme.state.settings || new Settings({
+          "runner.speed": "10"
         });
-        if (settingsLoadHandlers.length > 0 && !getParameterByName('utme_scenario')) {
+        if (settingsLoadHandlers.length > 0 && !utme.isRecording() && !utme.isPlaying()) {
             return new Promise(function (resolve, reject) {
                 settingsLoadHandlers[0](function (resp) {
                     settings.setDefaults(resp);
-                    resolve();
+                    resolve(settings);
                 }, function () {
-                    resolve();
+                    resolve(settings);
                 });
             });
         } else {
-            return Promise.resolve();
+            return Promise.resolve(settings);
         }
     },
 
@@ -679,6 +672,13 @@ var utme = {
         var utmeStateStr = localStorage.getItem('utme');
         if (utmeStateStr) {
             state = JSON.parse(utmeStateStr);
+
+            if (state.settings) {
+                var newSettings = new Settings();
+                newSettings.settings = state.settings.settings;
+                newSettings.settings = state.settings.defaultSettings;
+                state.settings = newSettings;
+            }
         } else {
             state = {
                 status: "INITIALIZING",
@@ -719,6 +719,22 @@ function isNotInLabelOrValid(ele) {
           ele.nodeName.toLowerCase() == 'input';
 }
 
+/**
+ * Returns true if it is an element that should be ignored
+ */
+function isIgnoredElement(ele) {
+  return !ele.hasAttribute || ele.hasAttribute('data-ignore') || $(ele).parents("[data-ignore]").length > 0;
+}
+
+/**
+ * Returns true if the given event should be recorded on the given element
+ */
+function shouldRecordEvent(ele, evt) {
+  var setting = utme.state.settings.get("recorder.events." + evt);
+  var isSettingTrue = (setting === true || setting === 'true' || typeof setting === 'undefined');
+  return utme.isRecording() && isSettingTrue && isNotInLabelOrValid(ele);
+}
+
 var timers = [];
 
 function initEventHandlers() {
@@ -729,22 +745,13 @@ function initEventHandlers() {
                 if (e.isTrigger)
                     return;
 
-                var setting = settings.get("recorder.events." + evt);
-                if (utme.isRecording() &&
-                    (setting === true || setting === 'true' || typeof setting === 'undefined') &&
-                    e.target.hasAttribute &&
-                    !e.target.hasAttribute('data-ignore') &&
-                    $(e.target).parents("[data-ignore]").length == 0 &&
-                    isNotInLabelOrValid(e.target)) {
+                if (!isIgnoredElement(e.target) && utme.isRecording()) {
+
                       var idx = utme.state.steps.length;
                       var args = {
-                          locator: utme.createElementLocator(e.target)
+                        locator: utme.createElementLocator(e.target)
                       };
                       var timer;
-
-                      if (e.which || e.button) {
-                          args.button = e.which || e.button;
-                      }
 
                       if (evt == 'mouseover') {
                           toggleHighlight(e.target, true);
@@ -756,6 +763,7 @@ function initEventHandlers() {
                               }, 500)
                           });
                       }
+
                       if (evt == 'mouseout') {
                           for (var i = 0; i < timers.length; i++) {
                               if (timers[i].element == e.target) {
@@ -768,11 +776,21 @@ function initEventHandlers() {
                           toggleReady(e.target, false);
                       }
 
-                      if (evt == 'change') {
-                          args.value = e.target.value;
-                      }
+                      if (shouldRecordEvent(e.target, evt)) {
+                        if (e.which || e.button) {
+                          args.button = e.which || e.button;
+                        }
 
-                      utme.registerEvent(evt, args, idx);
+                        if (evt == 'change') {
+                          args.attributes = {
+                            "value" : e.target.value,
+                            "checked": e.target.checked,
+                            "selected": e.target.selected
+                          };
+                        }
+
+                        utme.registerEvent(evt, args, idx);
+                      }
                 }
 
             };
@@ -826,7 +844,7 @@ function initEventHandlers() {
         if (e.isTrigger)
             return;
 
-        if (utme.isRecording() && e.target.hasAttribute && !e.target.hasAttribute('data-ignore') && $(e.target).parents("[data-ignore]").length == 0) {
+        if (!isIgnoredElement(e.target) && shouldRecordEvent(e.target, "keypress")) {
             var c = e.which;
 
             // TODO: Doesn't work with caps lock

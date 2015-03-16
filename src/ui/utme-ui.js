@@ -3,6 +3,13 @@ var body = require('./body');
 var ControlPanel = require('./components/control-panel.jsx');
 var utmeui = {};
 
+/**
+* Returns true if it is an element that should be ignored
+*/
+function isIgnoredElement(ele) {
+  return !ele.hasAttribute || ele.hasAttribute('data-ignore') || $(ele).parents("[data-ignore]").length > 0;
+}
+
 function toggleHighlight(ele, value) {
     $(ele).toggleClass('utme-verify', value);
 }
@@ -16,7 +23,7 @@ function initEventListeners() {
                 if (e.isTrigger)
                     return;
 
-                if (utme.isValidating() && e.target.hasAttribute && !e.target.hasAttribute('data-ignore') && $(e.target).parents("[data-ignore]").length == 0) {
+                if (utme.isValidating() && !isIgnoredElement(e.target)) {
                     e.preventDefault();
                     e.stopPropagation();
                     e.stopImmediatePropagation();
@@ -62,19 +69,20 @@ function initEventListeners() {
     });
 }
 
-function initControls() {
+function init() {
     body.appendComponent(ControlPanel, { utme: utme }, 'utme-bar');
+    initEventListeners();
 }
 
 if (utme) {
     if (!utme.state || utme.state.status != 'INITIALIZED') {
         utme.registerListener(function(eventName) {
             if (eventName == 'INITIALIZED') {
-                initControls();
+                init();
             }
         });
     } else {
-        initControls();
+        init();
     }
 }
 
