@@ -10,8 +10,9 @@ module.exports = function(grunt) {
   grunt.loadNpmTasks('grunt-browserify');
   grunt.loadNpmTasks('grunt-contrib-less');
   grunt.loadNpmTasks('grunt-mocha-test');
+  grunt.loadNpmTasks('grunt-utme');
 
-  grunt.initConfig({
+    grunt.initConfig({
       copy: {
         files: {
           expand: true,
@@ -82,51 +83,38 @@ module.exports = function(grunt) {
             }, {
               'build/js/utme-ci.js': ['src/js/**/*.js']
             }]
+          },
+          browserTest: {
+              options: {
+                  transform: ['reactify', es6ify.configure(/(src)+.+\.(js|jsx)$/)],
+                  browserifyOptions: {
+                      debug:true
+                  },
+                  external:['mocha-jsdom', 'jquery', 'jsdom', 'better-require']
+              },
+              files: [{
+                  'test/build/utme.js': ['test/utme.js']
+              }]
           }
       },
+
+      utmeServer: {
+          app: {
+              options: {
+                  directory: './test/scenarios/' // The directory to use to persist/load scenarios from.
+              }
+          }
+      },
+
       mochaTest: {
         test: {
-          src: ['test/**/*.js'],
-        },
-      },
-      watch: {
-        options: {
-            atBegin: true
-        },
-        scripts: {
-          files: ['src/**/*.js'],
-          tasks: ['uglify:debug']
-        },
-        styles: {
-          files: ['src/**/*.css'],
-          tasks: ['copy']
-        },
-      },
-      less: {
-        buildBootstrap: {
-          options: {
-            compress: false,
-            yuicompress: false,
-            paths: ['bower_components/bootstrap/less']
-          },
-          files: {
-            'tmp/css/bootstrap.css': ['src/ui/less/bootstrap.less']
-          }
-        },
-        build: {
-          options: {
-            compress: true,
-            yuicompress: true,
-            paths: ['tmp/css']
-          },
-          files: {
-            'build/css/utme.css': ['src/ui/less/utme.less']
-          }
+          src: ['test/**/*.js']
         }
       }
   });
 
-  grunt.registerTask('default', ['watch']);
+  grunt.registerTask('default', ['utmeServer']);
+  grunt.registerTask('browserTest', ['browserify:browserTest']);
   grunt.registerTask('build', ['mochaTest', 'browserify:build', 'uglify:build', 'less:buildBootstrap', 'less:build', 'copy']);
   grunt.registerTask('debugBuild', ['browserify:build', 'copy']);
 

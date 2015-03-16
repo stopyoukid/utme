@@ -1,7 +1,7 @@
 var utme = require('../utme.js');
 
 function getBaseURL () {
-  return utme.state && utme.state.testServer ? utme.state.testServer : getParameterByName("utme_test_server") || "http://0.0.0.0:9043/";
+  return utme.state && utme.state.testServer ? utme.state.testServer : getParameterByName("utme_test_server") || "http://192.168.200.136:9043/";
 }
 
 var serverReporter = {

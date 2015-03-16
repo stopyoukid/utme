@@ -189,23 +189,23 @@ function runStep(scenario, idx, toSkip) {
                       options.which = options.button = step.data.button;
                     }
 
-                    // console.log('Simulating ' + step.eventName + ' on element ', ele, locator.selectors[0], " for step " + idx);
-                    if (step.eventName == 'click') {
-                      $(ele).trigger('click');
-                    } else if ((step.eventName == 'focus' || step.eventName == 'blur') && ele[step.eventName]) {
-                      ele[step.eventName]();
-                    } else {
-                      Simulate[step.eventName](ele, options);
-                    }
-
+                    // Set element state
                     if (typeof step.data.value != "undefined" || typeof step.data.attributes != "undefined") {
                       var toApply = step.data.attributes ? step.data.attributes : { "value": step.data.value };
                       _.extend(ele, toApply);
-                      // For browsers that support the input event.
-                      if (supportsInputEvent) {
-                        Simulate.event(ele, 'input');
-                      }
-                      Simulate.event(ele, 'change'); // This should be fired after a blur event.
+                    }
+
+                    // console.log('Simulating ' + step.eventName + ' on element ', ele, locator.selectors[0], " for step " + idx);
+                    if ((step.eventName == 'focus' || step.eventName == 'blur') && ele[step.eventName]) {
+                      ele[step.eventName]();
+                    } else if (step.eventName === 'change') {
+                        // For browsers that support the input event.
+                        if (supportsInputEvent) {
+                            Simulate.event(ele, 'input');
+                        }
+                        Simulate.event(ele, 'change'); // This should be fired after a blur event.
+                    } else {
+                      Simulate[step.eventName](ele, options);
                     }
                   }
 
@@ -601,8 +601,13 @@ var utme = {
     registerReportHandler: function (handler) {
         reportHandlers.push(handler);
     },
-    registerLoadHandler: function (handler) {
-        loadHandlers.push(handler);
+    registerLoadHandler: function (handler, order) {
+        order = typeof order !== "undefined" ? order : loadHandlers.length;
+        if (loadHandlers.length > order) {
+            loadHandlers.splice(order, 0, handler);
+        } else {
+            loadHandlers.push(handler);
+        }
     },
     registerSettingsLoadHandler: function (handler) {
         settingsLoadHandlers.push(handler);
@@ -748,6 +753,7 @@ function initEventHandlers() {
                 if (!isIgnoredElement(e.target) && utme.isRecording()) {
 
                       var idx = utme.state.steps.length;
+                      var lastStep = utme.state.steps[idx - 1];
                       var args = {
                         locator: utme.createElementLocator(e.target)
                       };
@@ -781,11 +787,11 @@ function initEventHandlers() {
                           args.button = e.which || e.button;
                         }
 
-                        if (evt == 'change') {
+                        // Click because change fires firs
+                        if (evt === 'change') {
                           args.attributes = {
                             "value" : e.target.value,
-                            "checked": e.target.checked,
-                            "selected": e.target.selected
+                            "checked": e.target.checked
                           };
                         }
 

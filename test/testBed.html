@@ -1,0 +1,68 @@
+<html>
+<head>
+    <script src=//code.jquery.com/jquery-1.11.2.min.js></script>
+    <script src="/build/js/utme.js"></script>
+    <link rel="stylesheet" type="text/css" href="/build/css/utme.css">
+    <script>
+        var events = [
+            'click',
+            'focus',
+            'blur',
+            'dblclick',
+            // 'drag',
+            // 'dragenter',
+            // 'dragleave',
+            // 'dragover',
+            // 'dragstart',
+            // 'input',
+            'mousedown',
+            // 'mousemove',
+            'mouseenter',
+            'mouseleave',
+            'mouseout',
+            'mouseover',
+            'mouseup',
+            'change',
+            // 'resize',
+            // 'scroll'
+        ];
+        $(function() {
+            function htmlEscape(str) {
+                return String(str)
+                        .replace(/&/g, '&amp;')
+                        .replace(/"/g, '&quot;')
+                        .replace(/'/g, '&#39;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;');
+            }
+            $('#testArea > *').on(events.join(" "), function(e) {
+                var el = $("#events");
+                el.html(el.html() + "<br>" + e.type+ ":" + htmlEscape(e.target.outerHTML) );
+            });
+        });
+
+        function runMocha() {
+            mocha.run();
+        }
+    </script>
+</head>
+<body>
+
+<div id="testArea">
+    <form action="">
+        <input type="radio" name="sex" value="male">Male<br>
+        <input type="radio" name="sex" value="female">Female
+    </form>
+
+    <form action="">
+        <input type="checkbox">Male<br>
+        <input type="checkbox">Female
+    </form>
+</div>
+
+<h2>Events</h2>
+<div style="border:1px solid black" id="events">
+</div>
+
+</body>
+</html>

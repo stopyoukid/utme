@@ -1,0 +1,47 @@
+<html>
+<head>
+    <script src="//code.jquery.com/jquery-1.11.2.min.js"></script>
+    <script src="/node_modules/mocha/mocha.js"></script>
+    <link rel="stylesheet" type="text/css" href="/node_modules/mocha/mocha.css">
+    <script>mocha.setup('bdd')</script>
+    <link rel="stylesheet" type="text/css" href="/build/css/utme.css">
+    <script>
+        function createScriptElement(doc, src, text) {
+            var script = doc.createElement("script");
+            script.type = "text/javascript";
+            if (text) {
+                script.text = src;
+            } else {
+                script.src = src;
+            }
+            return script;
+        }
+
+        function loadIframe() {
+            var iframe = document.getElementById("iframe");
+            var iframeDocument = iframe.contentDocument || iframe.contentWindow.document;
+            iframeDocument.body.appendChild(createScriptElement(iframeDocument, "//code.jquery.com/jquery-1.11.2.min.js"));
+            iframeDocument.body.appendChild(createScriptElement(iframeDocument, "mocha = parent.mocha; console.log(mocha); describe = parent.describe;it = parent.it; beforeEach = parent.beforeEach", true));
+            iframeDocument.body.appendChild(createScriptElement(iframeDocument, "/test/build/utme.js"));
+        }
+
+        function runMocha() {
+            mocha.run();
+        }
+        $(function() {
+            loadIframe();
+        });
+    </script>
+</head>
+<body>
+
+<button onclick="runMocha()">Run Mocha Tests</button>
+
+<h2>Events</h2>
+<div style="border:1px solid black" id="mocha">
+</div>
+
+<iframe id="iframe" style="visibility:hidden"></iframe>
+
+</body>
+</html>
